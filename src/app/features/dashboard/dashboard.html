@@ -1,0 +1,135 @@
+<section class="dashboard-page">
+    <!-- Row 1 -->
+    <div class="hero">
+        <section class="hero-banner glass">
+            <p class="hero-kicker">Financial behavior overview</p>
+            <h1 class="hero-title">Your money habits are improving steadily.</h1>
+            <p class="hero-text">
+                MoneyMind detected healthier saving behavior this month, lower volatility
+                in spending, and stronger goal momentum across your recent activity.
+            </p>
+
+            <div class="hero-actions">
+                <button class="btn btn-primary">View Insights</button>
+                <button class="hero-secondary-btn">Open Simulator</button>
+            </div>
+        </section>
+
+        <section class="hero-score glass">
+            <p class="hero-score-label">Health Score</p>
+            <div class="hero-score-ring">
+                <span>82</span>
+            </div>
+            <p class="hero-score-text">Stable and improving</p>
+        </section>
+    </div>
+
+    <!-- Row 2 -->
+    <div class="stats-grid">
+        <article class="stat-card" [ngClass]="'stat-' + stat.theme" *ngFor="let stat of stats">
+            <div class="stat-top">
+                <div class="stat-icon">
+                    <fa-icon [icon]="stat.icon"></fa-icon>
+                </div>
+
+                <span class="stat-change" [class.positive]="stat.positive" [class.negative]="!stat.positive">
+                    {{ stat.change }}
+                </span>
+            </div>
+
+            <p class="stat-title">{{ stat.title }}</p>
+            <h3 class="stat-value">{{ stat.value }}</h3>
+        </article>
+    </div>
+
+    <!-- Row 3 -->
+    <div class="middle-grid">
+        <section class="chart-card glass">
+            <div class="section-head">
+                <div>
+                    <p class="section-kicker">Trend analysis</p>
+                    <h2 class="section-title">Spending trend chart</h2>
+                </div>
+            </div>
+
+            <div class="chart-wrap">
+                <canvas baseChart [data]="spendingChartData" [options]="spendingChartOptions"
+                    [type]="spendingChartType"></canvas>
+            </div>
+        </section>
+
+        <section class="insights-panel glass">
+            <div class="section-head">
+                <div>
+                    <p class="section-kicker">Smart signals</p>
+                    <h2 class="section-title">Insights</h2>
+                </div>
+            </div>
+
+            <div class="insight-list">
+                <article class="insight-card" *ngFor="let insight of insights">
+                    <span class="insight-tag">{{ insight.tag }}</span>
+                    <h3 class="insight-title">{{ insight.title }}</h3>
+                    <p class="insight-text">{{ insight.text }}</p>
+                </article>
+            </div>
+        </section>
+    </div>
+
+    <!-- Row 4 -->
+    <div class="bottom-grid">
+        <section class="goal-card glass">
+            <div class="section-head">
+                <div>
+                    <p class="section-kicker">Goal progress</p>
+                    <h2 class="section-title">Laptop Fund</h2>
+                </div>
+                <span class="goal-amount">Rs 38,000 / Rs 60,000</span>
+            </div>
+
+            <div class="goal-progress">
+                <div class="goal-progress-bar"></div>
+            </div>
+
+            <div class="goal-meta">
+                <div>
+                    <p class="goal-meta-label">Target date</p>
+                    <p class="goal-meta-value">Sep 2026</p>
+                </div>
+                <div>
+                    <p class="goal-meta-label">Monthly pace</p>
+                    <p class="goal-meta-value">Rs 7,200</p>
+                </div>
+                <div>
+                    <p class="goal-meta-label">Projection</p>
+                    <p class="goal-meta-value positive-text">On track</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="categories-card glass">
+            <div class="section-head">
+                <div>
+                    <p class="section-kicker">Category analysis</p>
+                    <h2 class="section-title">Top categories</h2>
+                </div>
+            </div>
+
+            <div class="category-list">
+                <article class="category-item" *ngFor="let category of topCategories">
+                    <div class="category-row">
+                        <div>
+                            <p class="category-name">{{ category.name }}</p>
+                            <p class="category-amount">{{ category.amount }}</p>
+                        </div>
+                        <span class="category-percent">{{ category.progress }}%</span>
+                    </div>
+
+                    <div class="category-progress">
+                        <div class="category-progress-bar" [style.width.%]="category.progress"></div>
+                    </div>
+                </article>
+            </div>
+        </section>
+    </div>
+</section>

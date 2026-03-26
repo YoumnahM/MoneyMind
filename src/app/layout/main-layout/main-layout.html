@@ -1,0 +1,24 @@
+<div class="app-shell">
+  <div
+    class="sidebar-overlay"
+    *ngIf="sidebarOpen"
+    (click)="closeSidebar()"
+  ></div>
+
+  <app-sidebar
+    [isOpen]="sidebarOpen"
+    (close)="closeSidebar()"
+  ></app-sidebar>
+
+  <div class="main-wrapper">
+    <app-header (menuClick)="toggleSidebar()"></app-header>
+
+    <main class="content-area">
+      <div class="content-inner">
+        <router-outlet></router-outlet>
+      </div>
+    </main>
+
+    <app-footer></app-footer>
+  </div>
+</div>

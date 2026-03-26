@@ -1,0 +1,17 @@
+.footer-minimal {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.8rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.footer-minimal .dot {
+  width: 4px;
+  height: 4px;
+  background: var(--text-secondary);
+  border-radius: 50%;
+  opacity: 0.5;
+}

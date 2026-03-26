@@ -1,0 +1,52 @@
+<header class="topbar">
+  <div class="topbar-left">
+    <button class="menu-btn" (click)="onMenuClick()">
+      <fa-icon [icon]="icons.bars"></fa-icon>
+    </button>
+
+    <div class="title-wrap">
+      <p class="topbar-kicker">{{ currentHeader.kicker }}</p>
+
+      <div class="title-row">
+        <h2 class="topbar-title">{{ currentHeader.title }}</h2>
+        <span class="header-badge">{{ currentHeader.badge }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="topbar-right">
+    <!-- Search -->
+    <div class="search-box">
+      <fa-icon [icon]="icons.search" class="search-icon"></fa-icon>
+      <input
+        type="text"
+        class="search-input"
+        placeholder="Search transactions, goals, insights..."
+      />
+    </div>
+
+    <!-- Notifications -->
+    <button class="icon-btn">
+      <fa-icon [icon]="icons.bell"></fa-icon>
+      <span class="notification-dot"></span>
+    </button>
+
+    <!-- Add -->
+    <!-- <button class="header-action header-action-primary">
+      <fa-icon [icon]="icons.plus"></fa-icon>
+      <span>Add</span>
+    </button> -->
+
+    <!-- Profile -->
+    <div class="profile-chip">
+      <div class="profile-avatar">
+        {{ user.initials }}
+      </div>
+
+      <div class="profile-meta">
+        <p class="profile-name">{{ user.name }}</p>
+        <p class="profile-role">{{ user.role }}</p>
+      </div>
+    </div>
+  </div>
+</header>

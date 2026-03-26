@@ -1,0 +1,187 @@
+<section class="insights-page">
+  <!-- Topbar -->
+  <section class="insights-topbar">
+    <div>
+      <p class="insights-subtitle">
+        Explore financial patterns, detected behaviors, and signals that explain how your spending is evolving.
+      </p>
+    </div>
+
+    <div class="topbar-badge glass">
+      <span class="badge-label">Model confidence</span>
+      <strong class="badge-value">82%</strong>
+    </div>
+  </section>
+
+  <!-- Trend overview -->
+  <section class="trend-overview glass">
+    <div class="section-head">
+      <div>
+        <p class="section-kicker">Trend overview</p>
+        <h2 class="section-title">Financial behavior momentum</h2>
+      </div>
+      <span class="section-meta">Compared with previous 30 days</span>
+    </div>
+
+    <div class="trend-layout">
+      <div class="trend-grid">
+        <article class="trend-card" *ngFor="let item of trendMetrics">
+          <p class="trend-label">{{ item.label }}</p>
+          <h3 class="trend-value">{{ item.value }}</h3>
+          <span
+            class="trend-change"
+            [ngClass]="item.positive ? 'trend-positive' : 'trend-negative'"
+          >
+            {{ item.change }}
+          </span>
+        </article>
+      </div>
+
+      <div class="trend-chart-card">
+        <div class="chart-head">
+          <span class="chart-title">Spend trend</span>
+          <span class="chart-note">6-week pattern</span>
+        </div>
+
+        <div class="chart-wrap">
+          <canvas
+            baseChart
+            [type]="trendChartType"
+            [data]="trendChartData"
+            [options]="trendChartOptions"
+          ></canvas>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Middle grid -->
+  <div class="insights-main-grid">
+    <section class="detected-habits glass">
+      <div class="section-head">
+        <div>
+          <p class="section-kicker">Detected habits</p>
+          <h2 class="section-title">Behavior patterns identified</h2>
+        </div>
+      </div>
+
+      <div class="habits-list">
+        <article
+          class="habit-card"
+          *ngFor="let habit of detectedHabits"
+          [ngClass]="'habit-' + habit.tone"
+        >
+          <span class="habit-tag">{{ habit.tag }}</span>
+          <h3 class="habit-title">{{ habit.title }}</h3>
+          <p class="habit-text">{{ habit.text }}</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="anomaly-alerts glass">
+      <div class="section-head">
+        <div>
+          <p class="section-kicker">Anomaly alerts</p>
+          <h2 class="section-title">Unusual movements</h2>
+        </div>
+      </div>
+
+      <div class="alerts-list">
+        <article class="alert-row" *ngFor="let alert of alerts">
+          <div
+            class="alert-indicator"
+            [ngClass]="'severity-' + alert.severity"
+          ></div>
+
+          <div class="alert-content">
+            <div class="alert-topline">
+              <h3 class="alert-title">{{ alert.title }}</h3>
+              <span class="alert-chip" [ngClass]="'chip-' + alert.severity">
+                {{ alert.severity }}
+              </span>
+            </div>
+
+            <p class="alert-text">{{ alert.text }}</p>
+          </div>
+
+          <div class="alert-side" *ngIf="alert.amount">
+            {{ alert.amount }}
+          </div>
+        </article>
+      </div>
+    </section>
+  </div>
+
+  <!-- Bottom grid -->
+  <div class="insights-bottom-grid">
+    <section class="weekday-weekend glass">
+      <div class="section-head">
+        <div>
+          <p class="section-kicker">Weekday / weekend analysis</p>
+          <h2 class="section-title">Rhythm of spending</h2>
+        </div>
+      </div>
+
+      <div class="weekday-chart-card">
+        <div class="chart-head">
+          <span class="chart-title">Daily spend pattern</span>
+          <span class="chart-note">Average per day</span>
+        </div>
+
+        <div class="chart-wrap weekday-chart-wrap">
+          <canvas
+            baseChart
+            [type]="weekdayChartType"
+            [data]="weekdayChartData"
+            [options]="weekdayChartOptions"
+          ></canvas>
+        </div>
+      </div>
+
+      <div class="pattern-grid">
+        <article class="pattern-card" *ngFor="let item of weekdayWeekendData">
+          <p class="pattern-label">{{ item.label }}</p>
+          <h3 class="pattern-value">{{ item.value }}</h3>
+          <p class="pattern-note">{{ item.note }}</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="category-growth glass">
+      <div class="section-head">
+        <div>
+          <p class="section-kicker">Category growth blocks</p>
+          <h2 class="section-title">Movement by category</h2>
+        </div>
+      </div>
+
+      <div class="growth-list">
+        <article class="growth-row" *ngFor="let item of categoryGrowth">
+          <div class="growth-main">
+            <div class="growth-top">
+              <div>
+                <h3 class="growth-name">{{ item.name }}</h3>
+                <p class="growth-amount">{{ item.amount }}</p>
+              </div>
+
+              <span
+                class="growth-change"
+                [ngClass]="item.direction === 'up' ? 'growth-up' : 'growth-down'"
+              >
+                {{ item.direction === 'up' ? '+' : '' }}{{ item.change }}%
+              </span>
+            </div>
+
+            <div class="growth-track">
+              <div
+                class="growth-bar"
+                [ngClass]="item.direction === 'up' ? 'bar-up' : 'bar-down'"
+                [style.width]="growthTrackStyle(item.change)"
+              ></div>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+  </div>
+</section>

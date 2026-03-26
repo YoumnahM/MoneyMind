@@ -1,0 +1,86 @@
+<aside class="sidebar" [class.sidebar-open]="isOpen">
+  <div class="sidebar-inner">
+    <div class="sidebar-top">
+      <div class="brand-wrap">
+        <div class="brand-logo">M</div>
+
+        <div class="brand-copy">
+          <h1 class="brand-title">MoneyMind</h1>
+          <p class="brand-subtitle">Financial Behavior Coach</p>
+        </div>
+      </div>
+
+      <button class="mobile-close" (click)="onClose()" aria-label="Close sidebar">
+        <fa-icon [icon]="icons.close"></fa-icon>
+      </button>
+    </div>
+
+    <div class="nav-section">
+      <p class="nav-section-label">Navigation</p>
+
+      <nav class="nav-links">
+        <a routerLink="/" routerLinkActive="active-link" [routerLinkActiveOptions]="{ exact: true }" class="nav-link"
+          (click)="onClose()">
+          <span class="nav-icon">
+            <fa-icon [icon]="icons.dashboard"></fa-icon>
+          </span>
+          <span class="nav-text">Dashboard</span>
+        </a>
+
+        <a routerLink="/transactions" routerLinkActive="active-link" class="nav-link" (click)="onClose()">
+          <span class="nav-icon">
+            <fa-icon [icon]="icons.transactions"></fa-icon>
+          </span>
+          <span class="nav-text">Transactions</span>
+        </a>
+
+        <a routerLink="/insights" routerLinkActive="active-link" class="nav-link" (click)="onClose()">
+          <span class="nav-icon">
+            <fa-icon [icon]="icons.insights"></fa-icon>
+          </span>
+          <span class="nav-text">Insights Lab</span>
+        </a>
+
+        <a routerLink="/simulator" routerLinkActive="active-link" class="nav-link" (click)="onClose()">
+          <span class="nav-icon">
+            <fa-icon [icon]="icons.simulator"></fa-icon>
+          </span>
+          <span class="nav-text">Simulator</span>
+        </a>
+
+        <a routerLink="/goals" routerLinkActive="active-link" class="nav-link" (click)="onClose()">
+          <span class="nav-icon">
+            <fa-icon [icon]="icons.goal"></fa-icon>
+          </span>
+          <span class="nav-text">Goals Planner</span>
+        </a>
+      </nav>
+    </div>
+
+    <div class="sidebar-summary glass">
+      <div class="summary-top">
+        <div>
+          <p class="summary-label">This Month</p>
+          <h3 class="summary-title">Score: 82</h3>
+        </div>
+
+        <div class="summary-icon">
+          <fa-icon [icon]="icons.trend"></fa-icon>
+        </div>
+      </div>
+
+      <p class="summary-text">
+        Stable habits with good momentum.
+      </p>
+
+      <div class="summary-progress">
+        <div class="summary-progress-bar"></div>
+      </div>
+
+      <div class="summary-meta">
+        <span>+6 this month</span>
+        <span>Strong trend</span>
+      </div>
+    </div>
+  </div>
+</aside>

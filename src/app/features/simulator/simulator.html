@@ -1,0 +1,223 @@
+<section class="simulator-page">
+  <!-- topbar -->
+  <section class="simulator-topbar">
+    <div>
+      <!-- <h1 class="simulator-title">Scenario Simulator</h1> -->
+      <p class="simulator-subtitle">
+        Adjust spending assumptions and instantly see how they affect your savings pace and goal timeline.
+      </p>
+    </div>
+
+    <div class="topbar-actions">
+      <button class="btn topbar-secondary-btn" type="button" (click)="resetScenario()">
+        Reset
+      </button>
+      <button class="btn btn-primary" type="button" (click)="applySmartSaverPreset()">
+        Smart Saver Preset
+      </button>
+    </div>
+  </section>
+
+  <!-- main grid -->
+  <div class="simulator-main-grid">
+    <!-- sliders -->
+    <section class="simulator-controls glass">
+      <div class="section-head">
+        <div>
+          <p class="section-kicker">Scenario inputs</p>
+          <h2 class="section-title">Adjust selected categories</h2>
+        </div>
+      </div>
+
+      <div class="slider-list">
+        <article class="slider-card" *ngFor="let category of categories">
+          <div class="slider-top">
+            <div>
+              <p class="slider-name">{{ category.name }}</p>
+              <p class="slider-baseline">
+                Current: Rs {{ baselineValues[category.key] | number }}
+              </p>
+            </div>
+
+            <strong class="slider-value">
+              Rs {{ scenarioValues[category.key] | number }}
+            </strong>
+          </div>
+
+          <input
+            type="range"
+            [min]="category.min"
+            [max]="category.max"
+            [step]="category.step"
+            [ngModel]="scenarioValues[category.key]"
+            (ngModelChange)="updateScenario(category.key, $event)"
+            [class]="category.colorClass"
+          />
+
+          <div class="slider-meta">
+            <span>Min: Rs {{ category.min | number }}</span>
+            <span>Max: Rs {{ category.max | number }}</span>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <!-- projections -->
+    <section class="projection-panel">
+      <div class="projection-grid">
+        <article class="projection-card glass">
+          <p class="projection-label">Baseline monthly expenses</p>
+          <h3 class="projection-value">Rs {{ baselineTotalExpenses | number }}</h3>
+          <span class="projection-note">Current selected categories total</span>
+        </article>
+
+        <article class="projection-card glass">
+          <p class="projection-label">Scenario monthly expenses</p>
+          <h3 class="projection-value">Rs {{ scenarioTotalExpenses | number }}</h3>
+          <span
+            class="projection-note"
+            [ngClass]="monthlyImprovement <= 0 ? 'negative-text' : 'positive-text'"
+          >
+            {{ monthlyImprovement > 0 ? '-' : '+' }}Rs {{ (monthlyImprovement < 0 ? -monthlyImprovement : monthlyImprovement) | number }}
+            impact vs baseline
+          </span>
+        </article>
+
+        <article class="projection-card glass">
+          <p class="projection-label">Available to save</p>
+          <h3 class="projection-value">Rs {{ scenarioLeftover | number }}</h3>
+          <span class="projection-note positive-text">
+            {{ monthlyImprovement >= 0 ? '+' : '' }}Rs {{ monthlyImprovement | number }}
+            additional room
+          </span>
+        </article>
+
+        <article class="projection-card glass">
+          <p class="projection-label">Projected monthly contribution</p>
+          <h3 class="projection-value">Rs {{ recommendedGoalContribution | number }}</h3>
+          <span class="projection-note">Goal-focused scenario estimate</span>
+        </article>
+      </div>
+
+      <!-- goal timeline -->
+      <section class="goal-timeline glass">
+        <div class="section-head">
+          <div>
+            <p class="section-kicker">Updated goal timeline</p>
+            <h2 class="section-title">Laptop Fund projection</h2>
+          </div>
+
+          <span class="timeline-badge" [ngClass]="monthsSaved > 0 ? 'badge-positive' : 'badge-neutral'">
+            {{ monthsSaved > 0 ? monthsSaved + ' months faster' : 'No timeline gain yet' }}
+          </span>
+        </div>
+
+        <div class="timeline-stats">
+          <div class="timeline-stat">
+            <span class="timeline-label">Current target month</span>
+            <strong class="timeline-value">{{ currentGoalMonthLabel }}</strong>
+          </div>
+
+          <div class="timeline-stat">
+            <span class="timeline-label">Projected target month</span>
+            <strong class="timeline-value positive-text">{{ projectedGoalMonthLabel }}</strong>
+          </div>
+
+          <div class="timeline-stat">
+            <span class="timeline-label">Saved so far</span>
+            <strong class="timeline-value">Rs {{ currentGoalSaved | number }}</strong>
+          </div>
+
+          <div class="timeline-stat">
+            <span class="timeline-label">Remaining</span>
+            <strong class="timeline-value">Rs {{ goalRemaining | number }}</strong>
+          </div>
+        </div>
+
+        <div class="timeline-progress-wrap">
+          <div class="progress-block">
+            <div class="progress-head">
+              <span>Current path</span>
+              <strong>{{ currentCompletionPercent | number:'1.0-0' }}%</strong>
+            </div>
+            <div class="progress-track">
+              <div
+                class="progress-bar progress-current"
+                [style.width.%]="currentCompletionPercent"
+              ></div>
+            </div>
+          </div>
+
+          <div class="progress-block">
+            <div class="progress-head">
+              <span>After one scenario month</span>
+              <strong>{{ projectedCompletionNextMonthPercent | number:'1.0-0' }}%</strong>
+            </div>
+            <div class="progress-track">
+              <div
+                class="progress-bar progress-projected"
+                [style.width.%]="projectedCompletionNextMonthPercent"
+              ></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </section>
+  </div>
+
+  <!-- comparison chart -->
+  <section class="comparison-section glass">
+    <div class="section-head">
+      <div>
+        <p class="section-kicker">Comparison before / after</p>
+        <h2 class="section-title">Scenario impact overview</h2>
+      </div>
+      <span class="section-meta">Baseline vs adjusted scenario</span>
+    </div>
+
+    <div class="comparison-layout">
+      <div class="comparison-chart-card">
+        <div class="chart-wrap">
+          <canvas
+            baseChart
+            [type]="comparisonChartType"
+            [data]="comparisonChartData"
+            [options]="comparisonChartOptions"
+          ></canvas>
+        </div>
+      </div>
+
+      <div class="comparison-insights">
+        <article class="comparison-note-card">
+          <span class="note-label">Expense shift</span>
+          <h3 class="note-value">
+            Rs {{ (baselineTotalExpenses - scenarioTotalExpenses) | number }}
+          </h3>
+          <p class="note-text">
+            Reduction in selected monthly expenses compared with the current baseline.
+          </p>
+        </article>
+
+        <article class="comparison-note-card">
+          <span class="note-label">Extra monthly capacity</span>
+          <h3 class="note-value positive-text">
+            Rs {{ monthlyImprovement | number }}
+          </h3>
+          <p class="note-text">
+            Additional amount that could be redirected toward savings or goal funding.
+          </p>
+        </article>
+
+        <article class="comparison-note-card">
+          <span class="note-label">Timeline result</span>
+          <h3 class="note-value">
+            {{ projectedMonthsToGoal }} months
+          </h3>
+          <p class="note-text">
+            Estimated time to complete your goal if this scenario becomes your new monthly pattern.
+          </p>
+        </article>
+      </div>
+    </div>
+  </section>
+</section>

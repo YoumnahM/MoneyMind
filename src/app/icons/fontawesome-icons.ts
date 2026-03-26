@@ -1,0 +1,36 @@
+import {
+  faBars,
+  faBell,
+  faMagnifyingGlass,
+  faPlus,
+  faWallet,
+  faChartLine,
+  faBullseye,
+  faLightbulb,
+  faList,
+  faArrowUp,
+  faArrowDown,
+  faArrowTrendUp,
+  faSliders,
+  faXmark
+} from '@fortawesome/free-solid-svg-icons';
+
+export const faIcons = {
+  bars: faBars,
+  bell: faBell,
+  search: faMagnifyingGlass,
+  plus: faPlus,
+  wallet: faWallet,
+  chart: faChartLine,
+  goal: faBullseye,
+  insight: faLightbulb,
+  list: faList,
+  up: faArrowUp,
+  down: faArrowDown,
+  dashboard: faChartLine,
+  transactions: faWallet,
+  insights: faLightbulb,
+  simulator: faSliders,
+  trend: faArrowTrendUp,
+  close: faXmark,
+};

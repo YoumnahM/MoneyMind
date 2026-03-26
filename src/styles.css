@@ -1,1 +1,217 @@
-/* You can add global styles to this file, and also import other style files */
+@import "tailwindcss";
+@import "ngx-toastr/toastr";
+
+/* ============================= */
+/* ROOT THEME VARIABLES */
+/* ============================= */
+
+:root {
+  /* Backgrounds */
+  --bg-primary: #0c111d;
+  --bg-secondary: #111827;
+
+  /* Shell surfaces (sidebar / header) */
+  --shell-bg: rgba(10, 18, 34, 0.82);
+  --shell-border: rgba(125, 211, 252, 0.08);
+
+  /* Glass */
+  --glass-bg: rgba(255, 255, 255, 0.04);
+  --glass-border: rgba(255, 255, 255, 0.06);
+
+  /* Pastel Accents  */
+  --accent-primary: #7dd3fc;
+  --accent-secondary: #a7f3d0;
+  --accent-tertiary: #fde68a;
+
+  --accent-success: #86efac;
+  --accent-warning: #fcd34d;
+  --accent-danger: #fca5a5;
+
+  /* Text */
+  --text-primary: #e6edf6;
+  --text-secondary: #9aa6b2;
+  --text-muted: #6b7280;
+
+  /* Soft Glow */
+  --glow-primary: 0 0 25px rgba(125, 211, 252, 0.25);
+  --glow-secondary: 0 0 25px rgba(167, 243, 208, 0.2);
+
+  /* Radius */
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+}
+
+/* ============================= */
+/* GLOBAL BASE */
+/* ============================= */
+
+html, body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, system-ui, sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(125, 211, 252, 0.08), transparent 35%),
+    radial-gradient(circle at top right, rgba(167, 243, 208, 0.06), transparent 35%),
+    linear-gradient(180deg, var(--bg-primary), var(--bg-secondary));
+  color: var(--text-primary);
+}
+
+/* Smooth UI feel */
+* {
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+}
+
+/* ============================= */
+/* GLASS COMPONENT */
+/* ============================= */
+.glass {
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-radius: var(--radius-xl);
+  box-shadow:
+    0 6px 24px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.glass:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+  transform: translateY(-2px);
+}
+
+.panel-surface {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.015)),
+    var(--bg-panel);
+  border: 1px solid var(--panel-border);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  border-radius: var(--radius-xl);
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* ============================= */
+/*  GLOW EFFECTS */
+/* ============================= */
+
+.glow-primary {
+  box-shadow: var(--glow-primary);
+}
+
+.glow-secondary {
+  box-shadow: var(--glow-secondary);
+}
+
+/* ============================= */
+/*  CARD STYLE */
+/* ============================= */
+
+.card {
+  padding: 1.5rem;
+  border-radius: var(--radius-xl);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(12px);
+}
+
+/* ============================= */
+/*  BUTTONS */
+/* ============================= */
+
+.btn {
+  padding: 0.6rem 1.2rem;
+  border-radius: 999px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+}
+
+/* Primary button */
+.btn-primary {
+  background: linear-gradient(
+    135deg,
+    var(--accent-primary),
+    var(--accent-secondary)
+  );
+  color: #0c111d;
+  box-shadow: var(--glow-primary);
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px) scale(1.02);
+}
+
+/* ============================= */
+/*  INPUTS */
+/* ============================= */
+
+.input {
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  border-radius: 12px;
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-primary);
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+/* ============================= */
+/* SLIDER  */
+/* ============================= */
+
+input[type="range"] {
+  width: 100%;
+  appearance: none;
+  height: 6px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  outline: none;
+}
+
+/* Thumb */
+input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  cursor: pointer;
+  box-shadow: var(--glow-primary);
+}
+
+/* ============================= */
+/*  SCROLLBAR */
+/* ============================= */
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+
+/* ============================= */
+/* TOAST OVERRIDE */
+/* ============================= */
+
+.toast-container .ngx-toastr {
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(12px);
+  border-radius: 12px;
+  color: var(--text-primary);
+}
