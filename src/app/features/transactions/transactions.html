@@ -1,237 +1,281 @@
 <section class="transactions-page">
-    <!-- Topbar -->
-    <section class="transactions-topbar">
-        <div>
-            <p class="transactions-subtitle">
-                Manage and review all income and expense records.
+  <section class="transactions-topbar">
+    <div class="topbar-copy">
+      <p class="transactions-subtitle">
+        Track your income and expenses, and optionally move money into your savings goals.
+      </p>
+    </div>
+
+    <div class="topbar-actions">
+      <button type="button" class="page-btn secondary-btn" (click)="resetFilters()" [disabled]="!hasActiveFilters">
+        Reset Filters
+      </button>
+
+      <button type="button" class="page-btn primary-btn" (click)="openDrawer()">
+        Add Transaction
+      </button>
+    </div>
+  </section>
+
+  <section class="transactions-toolbar glass">
+    <div class="toolbar-grid">
+      <div class="toolbar-field search-field">
+        <label for="search">Search</label>
+        <input id="search" class="input" type="text" placeholder="Search title, category, note, or goal"
+          [(ngModel)]="filters.search" (ngModelChange)="applyFilters()" />
+      </div>
+
+      <div class="toolbar-field">
+        <label for="typeFilter">Type</label>
+        <select id="typeFilter" class="input" [(ngModel)]="filters.type" (change)="applyFilters()">
+          <option value="all">All types</option>
+          <option value="income">Income</option>
+          <option value="expense">Expense</option>
+        </select>
+      </div>
+
+      <div class="toolbar-field">
+        <label for="categoryFilter">Category</label>
+        <select id="categoryFilter" class="input" [(ngModel)]="filters.category" (change)="applyFilters()">
+          <option value="all">All categories</option>
+          <option *ngFor="let category of categories" [value]="category">
+            {{ category }}
+          </option>
+        </select>
+      </div>
+
+      <div class="toolbar-field">
+        <label for="monthFilter">Month</label>
+        <input id="monthFilter" class="input" type="month" [(ngModel)]="filters.month" (change)="applyFilters()" />
+      </div>
+
+      <div class="toolbar-field">
+        <label for="sortBy">Sort by</label>
+        <select id="sortBy" class="input" [(ngModel)]="sortBy" (change)="applyFilters()">
+          <option value="latest">Latest</option>
+          <option value="oldest">Oldest</option>
+          <option value="highest">Highest amount</option>
+          <option value="lowest">Lowest amount</option>
+        </select>
+      </div>
+    </div>
+  </section>
+
+  <section class="summary-grid">
+    <article class="summary-card glass">
+      <span class="summary-label">Income</span>
+      <strong class="summary-value positive-text">
+        Rs {{ totalIncome.toLocaleString() }}
+      </strong>
+      <p class="summary-note">Filtered incoming cash</p>
+    </article>
+
+    <article class="summary-card glass">
+      <span class="summary-label">Expense</span>
+      <strong class="summary-value negative-text">
+        Rs {{ totalExpense.toLocaleString() }}
+      </strong>
+      <p class="summary-note">Filtered outgoing cash</p>
+    </article>
+
+    <article class="summary-card glass">
+      <span class="summary-label">Net flow</span>
+      <strong class="summary-value" [ngClass]="netFlow >= 0 ? 'positive-text' : 'negative-text'">
+        Rs {{ netFlow.toLocaleString() }}
+      </strong>
+      <p class="summary-note">Income minus expense</p>
+    </article>
+
+    <article class="summary-card glass">
+      <span class="summary-label">Transactions</span>
+      <strong class="summary-value">
+        {{ filteredTransactions.length }}
+      </strong>
+      <p class="summary-note">Entries in current view</p>
+    </article>
+  </section>
+
+  <section class="transactions-table glass">
+    <div class="table-header">
+      <div>Date</div>
+      <div>Transaction</div>
+      <div>Category</div>
+      <div>Type</div>
+      <div>Amount</div>
+      <div class="actions-column">Actions</div>
+    </div>
+
+    <div *ngIf="filteredTransactions.length > 0; else emptyState" class="table-body">
+      <article class="table-row" *ngFor="let transaction of filteredTransactions; trackBy: trackByTransactionId">
+        <div class="table-cell">
+          <span class="mobile-label">Date</span>
+          <span class="cell-main">{{ transaction.date }}</span>
+        </div>
+
+        <div class="table-cell title-cell">
+          <span class="mobile-label">Transaction</span>
+          <strong class="transaction-title">{{ transaction.title }}</strong>
+          <span class="transaction-note">
+            {{ transaction.note || 'No note added' }}
+          </span>
+
+          <div class="goal-chip" *ngIf="transaction.isGoalContribution && transaction.goalName">
+            For {{ transaction.goalName }}
+          </div>
+        </div>
+
+        <div class="table-cell">
+          <span class="mobile-label">Category</span>
+          <span class="category-badge">{{ transaction.category }}</span>
+        </div>
+
+        <div class="table-cell">
+          <span class="mobile-label">Type</span>
+          <span class="type-pill" [ngClass]="transaction.type === 'income' ? 'pill-income' : 'pill-expense'">
+            {{ transaction.type }}
+          </span>
+        </div>
+
+        <div class="table-cell amount-cell"
+          [ngClass]="transaction.type === 'income' ? 'positive-text' : 'negative-text'">
+          <span class="mobile-label">Amount</span>
+          <strong>{{ formatAmount(transaction.amount, transaction.type) }}</strong>
+        </div>
+
+        <div class="table-cell actions-column">
+          <span class="mobile-label">Actions</span>
+          <div class="row-actions">
+            <button type="button" class="row-btn icon-btn" (click)="editTransaction(transaction)" aria-label="Edit transaction">
+              <fa-icon [icon]="icons.edit"></fa-icon>
+            </button>
+          
+            <button type="button" class="row-btn icon-btn danger-btn" (click)="deleteTransaction(transaction.id)"
+              aria-label="Delete transaction">
+              <fa-icon [icon]="icons.delete"></fa-icon>
+            </button>
+          </div>
+        </div>
+      </article>
+    </div>
+
+    <ng-template #emptyState>
+      <div class="empty-state">
+        <div class="empty-state-box">
+          <h3>No transactions found</h3>
+          <p>Try changing your filters or add a new transaction.</p>
+          <button type="button" class="page-btn primary-btn" (click)="openDrawer()">
+            Add your first transaction
+          </button>
+        </div>
+      </div>
+    </ng-template>
+  </section>
+
+  <div class="drawer-backdrop" *ngIf="isDrawerOpen" (click)="closeDrawer()"></div>
+
+  <aside class="transaction-drawer" [class.open]="isDrawerOpen">
+    <div class="drawer-header">
+      <div>
+        <p class="drawer-kicker">
+          {{ editingTransaction ? 'Update entry' : 'New entry' }}
+        </p>
+        <h2 class="drawer-title">
+          {{ editingTransaction ? 'Edit Transaction' : 'Add Transaction' }}
+        </h2>
+      </div>
+
+      <button type="button" class="drawer-close-btn" (click)="closeDrawer()">
+        ✕
+      </button>
+    </div>
+
+    <form class="drawer-form" (ngSubmit)="saveTransaction()">
+      <div class="drawer-grid">
+        <div class="form-field full-span contribution-card">
+          <div class="contribution-copy">
+            <label class="checkbox-row" for="isGoalContribution">
+              <input id="isGoalContribution" type="checkbox" [(ngModel)]="form.isGoalContribution"
+                name="isGoalContribution" (ngModelChange)="onContributionToggle()" />
+              <span>Put this money aside for a savings goal</span>
+            </label>
+
+            <p class="helper-text">
+              Turn this on when the money should count toward one specific goal.
             </p>
+          </div>
         </div>
 
-        <div class="topbar-actions">
-            <button class="btn topbar-secondary-btn" type="button">Export</button>
-            <button class="btn btn-primary" type="button" (click)="openDrawer()">
-                Add Transaction
-            </button>
-        </div>
-    </section>
-
-    <!-- Toolbar -->
-    <section class="transactions-toolbar glass">
-        <div class="toolbar-row">
-            <div class="toolbar-search">
-                <input class="input" type="text" placeholder="Search transactions..." [(ngModel)]="filters.search" />
-            </div>
-
-            <select class="input toolbar-control" [(ngModel)]="filters.type">
-                <option value="all">All types</option>
-                <option value="income">Income</option>
-                <option value="expense">Expenses</option>
-            </select>
-
-            <select class="input toolbar-control" [(ngModel)]="filters.category">
-                <option value="all">All categories</option>
-                <option *ngFor="let category of categories" [value]="category">
-                    {{ category }}
-                </option>
-            </select>
-
-            <input class="input toolbar-control" type="month" [(ngModel)]="filters.month" />
-
-            <select class="input toolbar-control" [(ngModel)]="sortBy">
-                <option value="latest">Latest first</option>
-                <option value="oldest">Oldest first</option>
-                <option value="highest">Highest amount</option>
-                <option value="lowest">Lowest amount</option>
-            </select>
-
-            <button class="btn toolbar-btn" type="button" (click)="applyFilters()">
-                Apply
-            </button>
-
-            <button class="btn toolbar-reset-btn" type="button" (click)="resetFilters()">
-                Reset
-            </button>
+        <div class="form-field full-span">
+          <label for="title">Title</label>
+          <input id="title" class="input" type="text" placeholder="Salary, groceries, transport..."
+            [(ngModel)]="form.title" name="title" />
         </div>
 
-        <div class="toolbar-range">
-            <div class="range-label-row">
-                <span class="range-label">Max amount</span>
-                <span class="range-value">Rs {{ filters.maxAmount | number }}</span>
-            </div>
-
-            <input type="range" min="0" max="50000" step="500" [(ngModel)]="filters.maxAmount" />
-        </div>
-    </section>
-
-    <!-- Summary Strip -->
-    <section class="summary-strip glass">
-        <div class="summary-item">
-            <span class="summary-label">Records</span>
-            <strong class="summary-value">{{ filteredTransactions.length }}</strong>
+        <div class="form-field">
+          <label for="amount">Amount</label>
+          <input id="amount" class="input" type="number" min="0" placeholder="Enter amount" [(ngModel)]="form.amount"
+            name="amount" />
         </div>
 
-        <div class="summary-item">
-            <span class="summary-label">Income</span>
-            <strong class="summary-value positive-text">
-                Rs {{ totalIncome | number }}
-            </strong>
+        <div class="form-field">
+          <label for="type">Type</label>
+          <select id="type" class="input" [(ngModel)]="form.type" name="type" [disabled]="form.isGoalContribution ?? false">
+            <option value="income">Income</option>
+            <option value="expense">Expense</option>
+          </select>
         </div>
 
-        <div class="summary-item">
-            <span class="summary-label">Expenses</span>
-            <strong class="summary-value negative-text">
-                Rs {{ totalExpense | number }}
-            </strong>
+        <div class="form-field" *ngIf="!form.isGoalContribution">
+          <label for="category">Category</label>
+          <select id="category" class="input" [(ngModel)]="form.category" name="category">
+            <option *ngFor="let category of categories" [value]="category">
+              {{ category }}
+            </option>
+          </select>
         </div>
 
-        <div class="summary-item">
-            <span class="summary-label">Net</span>
-            <strong class="summary-value" [ngClass]="netFlow >= 0 ? 'positive-text' : 'negative-text'">
-                Rs {{ netFlow | number }}
-            </strong>
-        </div>
-    </section>
+        <div class="form-field" *ngIf="form.isGoalContribution">
+          <label for="goalId">Goal</label>
+          <select id="goalId" class="input" [(ngModel)]="form.goalId" name="goalId"
+            (ngModelChange)="onGoalChange($event)">
+            <option [ngValue]="null">Select a goal</option>
+            <option *ngFor="let goal of availableGoals" [ngValue]="goal.id">
+              {{ goal.name }}
+            </option>
+          </select>
 
-    <!-- Ledger -->
-    <section class="transactions-ledger glass">
-        <div class="ledger-head">
-            <div>Date</div>
-            <div>Title</div>
-            <div>Category</div>
-            <div>Type</div>
-            <div class="amount-col">Amount</div>
-            <div class="actions-col">Actions</div>
+          <p class="helper-text" *ngIf="!hasGoals">
+            No active goals yet. Create one first from the Goals page.
+          </p>
         </div>
 
-        <div class="ledger-body" *ngIf="filteredTransactions.length; else emptyState">
-            <article class="ledger-row" *ngFor="let transaction of filteredTransactions; trackBy: trackByTransactionId">
-                <div class="ledger-cell ledger-date">
-                    <span class="mobile-label">Date</span>
-                    {{ transaction.date | date:'dd MMM yyyy' }}
-                </div>
-
-                <div class="ledger-cell ledger-title-wrap">
-                    <span class="mobile-label">Title</span>
-
-                    <div class="ledger-title-block">
-                        <p class="ledger-title">{{ transaction.title }}</p>
-                        <span class="ledger-note" *ngIf="transaction.note">
-                            {{ transaction.note }}
-                        </span>
-                    </div>
-                </div>
-
-                <div class="ledger-cell">
-                    <span class="mobile-label">Category</span>
-                    <span class="ledger-category">{{ transaction.category }}</span>
-                </div>
-
-                <div class="ledger-cell">
-                    <span class="mobile-label">Type</span>
-                    <span class="ledger-pill"
-                        [ngClass]="transaction.type === 'income' ? 'pill-income' : 'pill-expense'">
-                        {{ transaction.type }}
-                    </span>
-                </div>
-
-                <div class="ledger-cell amount-col ledger-amount"
-                    [ngClass]="transaction.type === 'income' ? 'positive-text' : 'negative-text'">
-                    <span class="mobile-label">Amount</span>
-                    {{ transaction.type === 'income' ? '+' : '-' }} Rs {{ transaction.amount | number }}
-                </div>
-
-                <div class="ledger-cell actions-col">
-                    <span class="mobile-label">Actions</span>
-                    <div class="actions-wrap">
-                        <button class="icon-action-btn" type="button" (click)="editTransaction(transaction)">
-                            Edit
-                        </button>
-
-                        <button class="icon-action-btn danger-btn" type="button"
-                            (click)="deleteTransaction(transaction.id)">
-                            Delete
-                        </button>
-                    </div>
-                </div>
-            </article>
+        <div class="form-field">
+          <label for="date">Date</label>
+          <input id="date" class="input" type="date" [(ngModel)]="form.date" name="date" />
         </div>
 
-        <ng-template #emptyState>
-            <div class="ledger-empty">
-                <h3>No matching transactions</h3>
-                <p>Adjust filters or create a new transaction.</p>
-            </div>
-        </ng-template>
-    </section>
-
-    <!-- Drawer -->
-    <div class="drawer-backdrop" *ngIf="isDrawerOpen" (click)="closeDrawer()"></div>
-
-    <aside class="transaction-drawer" [class.open]="isDrawerOpen">
-        <div class="drawer-header">
-            <div>
-                <p class="drawer-kicker">
-                    {{ editingTransaction ? 'Edit record' : 'New record' }}
-                </p>
-                <h2>
-                    {{ editingTransaction ? 'Edit Transaction' : 'Add Transaction' }}
-                </h2>
-            </div>
-
-            <button class="drawer-close-btn" type="button" (click)="closeDrawer()">
-                ✕
-            </button>
+        <div class="form-field full-span">
+          <label for="note">Note</label>
+          <textarea id="note" class="input note-area" rows="4" placeholder="Optional note" [(ngModel)]="form.note"
+            name="note"></textarea>
         </div>
 
-        <form class="drawer-form" (ngSubmit)="saveTransaction()">
-            <div class="drawer-grid">
-                <div class="form-field full">
-                    <label for="title">Title</label>
-                    <input id="title" class="input" type="text" name="title" [(ngModel)]="form.title" required />
-                </div>
+        <div class="form-field full-span savings-preview" *ngIf="form.isGoalContribution && form.goalName">
+          <div class="preview-chip">
+            This contribution will be added to <strong>{{ form.goalName }}</strong>
+          </div>
+        </div>
+      </div>
 
-                <div class="form-field">
-                    <label for="amount">Amount</label>
-                    <input id="amount" class="input" type="number" name="amount" [(ngModel)]="form.amount" required />
-                </div>
+      <div class="drawer-actions">
+        <button type="button" class="page-btn secondary-btn" (click)="closeDrawer()">
+          Cancel
+        </button>
 
-                <div class="form-field">
-                    <label for="type">Type</label>
-                    <select id="type" class="input" name="type" [(ngModel)]="form.type" required>
-                        <option value="income">Income</option>
-                        <option value="expense">Expense</option>
-                    </select>
-                </div>
-
-                <div class="form-field">
-                    <label for="category">Category</label>
-                    <select id="category" class="input" name="category" [(ngModel)]="form.category" required>
-                        <option *ngFor="let category of categories" [value]="category">
-                            {{ category }}
-                        </option>
-                    </select>
-                </div>
-
-                <div class="form-field">
-                    <label for="date">Date</label>
-                    <input id="date" class="input" type="date" name="date" [(ngModel)]="form.date" required />
-                </div>
-
-                <div class="form-field full">
-                    <label for="note">Note</label>
-                    <textarea id="note" class="input textarea" name="note" [(ngModel)]="form.note"></textarea>
-                </div>
-            </div>
-
-            <div class="drawer-actions">
-                <button type="button" class="btn toolbar-reset-btn" (click)="closeDrawer()">
-                    Cancel
-                </button>
-
-                <button type="submit" class="btn btn-primary">
-                    {{ editingTransaction ? 'Save Changes' : 'Add Transaction' }}
-                </button>
-            </div>
-        </form>
-    </aside>
+        <button type="submit" class="page-btn primary-btn">
+          {{ editingTransaction ? 'Update Transaction' : 'Save Transaction' }}
+        </button>
+      </div>
+    </form>
+  </aside>
 </section>

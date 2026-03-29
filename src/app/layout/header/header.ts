@@ -29,7 +29,7 @@ export class Header {
       badge: 'Live Insights',
     },
     '/transactions': {
-      kicker: 'Manage activity',
+      kicker: '',
       title: 'Transactions',
       badge: 'Smart Tracking',
     },
@@ -39,12 +39,12 @@ export class Header {
       badge: 'Pattern Detection',
     },
     '/simulator': {
-      kicker: 'Plan ahead',
+      kicker: '',
       title: 'Scenario Simulator',
       badge: 'Forecast Mode',
     },
     '/goals': {
-      kicker: 'Stay focused',
+      kicker: '',
       title: 'Goals Planner',
       badge: 'Progress Tracking',
     },

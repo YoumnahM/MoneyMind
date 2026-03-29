@@ -1,113 +1,43 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 import { BaseChartDirective } from 'ng2-charts';
-import { ChartConfiguration, ChartType } from 'chart.js';
-import { faIcons } from '../../icons/fontawesome-icons';
+import { ChartConfiguration } from 'chart.js';
+import { Subscription } from 'rxjs';
+import { Router } from '@angular/router';
+
+import { DashboardService } from '../../services/dashboard.service';
+import { StatCard, InsightItem, TopCategory, HealthScore } from '../../model/dashboard.model';
+import { Goal } from '../../model/goals.model';
+import { GoalsService } from '../../services/goal.service';
 
 @Component({
   selector: 'app-dashboard',
+  standalone: true,
   imports: [CommonModule, FontAwesomeModule, BaseChartDirective],
   templateUrl: './dashboard.html',
   styleUrl: './dashboard.css',
 })
-export class Dashboard {
-  icons = faIcons;
+export class Dashboard implements OnInit, OnDestroy {
+  private subscriptions = new Subscription();
 
-  stats = [
-    {
-      title: 'Total Balance',
-      value: 'Rs 84,500',
-      change: '+12.4%',
-      positive: true,
-      icon: this.icons.wallet,
-      theme: 'blue',
-    },
-    {
-      title: 'Income',
-      value: 'Rs 26,700',
-      change: '+5.6%',
-      positive: true,
-      icon: this.icons.dashboard,
-      theme: 'green',
-    },
-    {
-      title: 'Expenses',
-      value: 'Rs 18,240',
-      change: '-4.1%',
-      positive: false,
-      icon: this.icons.transactions,
-      theme: 'orange',
-    },
-    {
-      title: 'Saved This Month',
-      value: 'Rs 9,320',
-      change: '+8.9%',
-      positive: true,
-      icon: this.icons.goal,
-      theme: 'purple',
-    },
-  ];
+  stats: StatCard[] = [];
+  insights: InsightItem[] = [];
+  topCategories: TopCategory[] = [];
+  goals: Goal[] = [];
+  latestGoal: Goal | null = null;
 
-  insights = [
-    {
-      title: 'Dining spending is trending up',
-      text: 'You spent 18% more on dining compared to last month, especially on weekends.',
-      tag: 'Trend',
-    },
-    {
-      title: 'Savings momentum is strong',
-      text: 'You are on track to exceed your monthly savings target by Rs 2,100.',
-      tag: 'Positive',
-    },
-    {
-      title: 'Transport is more stable',
-      text: 'Your transport spending is becoming more consistent compared to last month.',
-      tag: 'Stable',
-    },
-  ];
-
-  topCategories = [
-    {
-      name: 'Dining',
-      amount: 'Rs 6,240',
-      progress: 78,
-    },
-    {
-      name: 'Transport',
-      amount: 'Rs 3,180',
-      progress: 52,
-    },
-    {
-      name: 'Shopping',
-      amount: 'Rs 4,420',
-      progress: 64,
-    },
-    {
-      name: 'Bills',
-      amount: 'Rs 2,980',
-      progress: 45,
-    },
-  ];
+  healthScore: HealthScore = {
+    score: 0,
+    label: 'No data yet',
+    status: 'critical',
+  };
 
   spendingChartType: 'line' = 'line';
 
   spendingChartData: ChartConfiguration<'line'>['data'] = {
-    labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4'],
-    datasets: [
-      {
-        data: [4200, 5100, 3960, 4980],
-        label: 'Expenses',
-        tension: 0.4,
-        fill: true,
-      },
-      {
-        data: [6200, 6400, 6100, 6700],
-        label: 'Income',
-        tension: 0.4,
-        fill: true,
-      },
-    ],
+    labels: [],
+    datasets: [],
   };
 
   spendingChartOptions: ChartConfiguration<'line'>['options'] = {
@@ -115,15 +45,37 @@ export class Dashboard {
     maintainAspectRatio: false,
     plugins: {
       legend: {
+        display: true,
         labels: {
           color: '#9aa6b2',
+          boxWidth: 12,
+          boxHeight: 12,
         },
+      },
+      tooltip: {
+        mode: 'index',
+        intersect: false,
+      },
+    },
+    interaction: {
+      mode: 'index',
+      intersect: false,
+    },
+    elements: {
+      line: {
+        tension: 0.35,
+      },
+      point: {
+        radius: 3,
+        hoverRadius: 5,
       },
     },
     scales: {
       x: {
         ticks: {
           color: '#9aa6b2',
+          maxRotation: 0,
+          autoSkip: true,
         },
         grid: {
           color: 'rgba(255,255,255,0.05)',
@@ -139,4 +91,182 @@ export class Dashboard {
       },
     },
   };
+
+  constructor(
+    private dashboardService: DashboardService,
+    private goalsService: GoalsService,
+    private router: Router,
+  ) {}
+
+  ngOnInit(): void {
+    this.subscriptions.add(
+      this.dashboardService.getStats().subscribe((data) => {
+        this.stats = data;
+      }),
+    );
+
+    this.subscriptions.add(
+      this.dashboardService.getInsights().subscribe((data) => {
+        this.insights = data;
+      }),
+    );
+
+    this.subscriptions.add(
+      this.dashboardService.getTopCategories().subscribe((data) => {
+        this.topCategories = data;
+      }),
+    );
+
+    this.subscriptions.add(
+      this.dashboardService.getSpendingChartData().subscribe((data) => {
+        this.spendingChartData = data;
+      }),
+    );
+
+    this.subscriptions.add(
+      this.dashboardService.getHealthScore().subscribe((data) => {
+        this.healthScore = data;
+      }),
+    );
+
+    this.subscriptions.add(
+      this.goalsService.getGoals().subscribe((goals) => {
+        this.goals = goals;
+        this.latestGoal = this.getLatestGoal(goals);
+      }),
+    );
+
+    this.updateChartOptionsForViewport();
+    window.addEventListener('resize', this.updateChartOptionsForViewport);
+  }
+
+  get healthScoreCircumference(): number {
+    return 2 * Math.PI * 54;
+  }
+
+  get healthScoreOffset(): number {
+    const progress = this.healthScore.score / 100;
+    return this.healthScoreCircumference * (1 - progress);
+  }
+
+  private getLatestGoal(goals: Goal[]): Goal | null {
+    if (!goals.length) return null;
+    return [...goals].sort((a, b) => b.id - a.id)[0];
+  }
+
+  getGoalProgress(goal: Goal): number {
+    if (!goal.targetAmount) return 0;
+    return Math.min((goal.savedAmount / goal.targetAmount) * 100, 100);
+  }
+
+  getGoalRemaining(goal: Goal): number {
+    return Math.max(goal.targetAmount - goal.savedAmount, 0);
+  }
+
+  getGoalStatus(goal: Goal): string {
+    const progress = this.getGoalProgress(goal);
+
+    if (progress >= 100) return 'Completed';
+    if (progress >= 75) return 'On track';
+    if (progress >= 40) return 'In progress';
+    return 'Needs attention';
+  }
+
+  isGoalPositive(goal: Goal): boolean {
+    const status = this.getGoalStatus(goal);
+    return status === 'Completed' || status === 'On track';
+  }
+
+  formatCurrency(amount: number): string {
+    return `Rs ${amount.toLocaleString()}`;
+  }
+
+  formatDeadline(deadline: string): string {
+    const date = new Date(deadline);
+
+    if (isNaN(date.getTime())) {
+      return 'Not set';
+    }
+
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      year: 'numeric',
+    });
+  }
+
+  goToInsights(): void {
+    this.router.navigate(['/insights']);
+  }
+
+  goToSimulator(): void {
+    this.router.navigate(['/simulator']);
+  }
+
+  goToGoals(): void {
+    this.router.navigate(['/goals']);
+  }
+
+  private updateChartOptionsForViewport = (): void => {
+    const isMobile = window.innerWidth <= 640;
+    const isTablet = window.innerWidth <= 900;
+
+    this.spendingChartOptions = {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: !isMobile,
+          labels: {
+            color: '#9aa6b2',
+            boxWidth: isMobile ? 8 : 12,
+            boxHeight: isMobile ? 8 : 12,
+          },
+        },
+        tooltip: {
+          mode: 'index',
+          intersect: false,
+        },
+      },
+      interaction: {
+        mode: 'index',
+        intersect: false,
+      },
+      elements: {
+        line: {
+          tension: 0.35,
+        },
+        point: {
+          radius: isMobile ? 0 : isTablet ? 2 : 3,
+          hoverRadius: isMobile ? 2 : 5,
+        },
+      },
+      scales: {
+        x: {
+          ticks: {
+            color: '#9aa6b2',
+            maxRotation: 0,
+            autoSkip: true,
+            maxTicksLimit: isMobile ? 4 : isTablet ? 6 : 8,
+          },
+          grid: {
+            color: 'rgba(255,255,255,0.05)',
+          },
+        },
+        y: {
+          ticks: {
+            color: '#9aa6b2',
+            maxTicksLimit: isMobile ? 4 : 6,
+          },
+          grid: {
+            color: 'rgba(255,255,255,0.05)',
+          },
+        },
+      },
+    };
+  };
+
+  ngOnDestroy(): void {
+    window.removeEventListener('resize', this.updateChartOptionsForViewport);
+    this.subscriptions.unsubscribe();
+  }
 }

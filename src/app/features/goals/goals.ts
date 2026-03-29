@@ -1,217 +1,243 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Subscription } from 'rxjs';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+
 import { Goal, GoalRecommendation } from '../../model/goals.model';
+import { FinanceTransaction } from '../../model/transactions.model';
+import { TransactionService } from '../../services/transaction.service';
+import { GoalsService } from '../../services/goal.service';
+import { ToastrService } from 'ngx-toastr';
+import { faIcons } from '../../icons/fontawesome-icons';
+
+type GoalInput = Omit<Goal, 'id'>;
+type GoalStatus = 'completed' | 'on-track' | 'needs-attention';
+type GoalStatusFilter = 'all' | GoalStatus;
+type GoalSortOption = 'deadline' | 'progress-high' | 'progress-low' | 'target-high' | 'name';
 
 @Component({
   selector: 'app-goals',
-  imports: [CommonModule, FormsModule],
+  standalone: true,
+  imports: [CommonModule, FormsModule, FontAwesomeModule],
   templateUrl: './goals.html',
-  styleUrl: './goals.css',
+  styleUrls: ['./goals.css'],
 })
-export class Goals {
-  goals: Goal[] = [
-    {
-      id: 1,
-      name: 'Laptop Fund',
-      targetAmount: 60000,
-      savedAmount: 38000,
-      monthlyContribution: 7200,
-      deadline: '2026-09-01',
-      category: 'Tech',
-    },
-    {
-      id: 2,
-      name: 'Emergency Fund',
-      targetAmount: 120000,
-      savedAmount: 46000,
-      monthlyContribution: 9000,
-      deadline: '2027-03-01',
-      category: 'Safety',
-    },
-    {
-      id: 3,
-      name: 'Vacation',
-      targetAmount: 45000,
-      savedAmount: 12000,
-      monthlyContribution: 5000,
-      deadline: '2026-12-01',
-      category: 'Lifestyle',
-    },
+export class Goals implements OnInit, OnDestroy {
+  private readonly subscription = new Subscription();
+
+  readonly icons = faIcons;
+
+  readonly categories: string[] = [
+    'Emergency',
+    'Tech',
+    'Travel',
+    'Education',
+    'Home',
+    'Lifestyle',
+    'Transport',
+    'Health',
+    'Other',
   ];
 
-  form: Omit<Goal, 'id'> = {
-    name: '',
-    targetAmount: 0,
-    savedAmount: 0,
-    monthlyContribution: 0,
-    deadline: '',
-    category: 'General',
-  };
-
-  calculator = {
-    targetAmount: 50000,
-    currentSaved: 10000,
-    monthlyContribution: 4000,
-  };
-
-  recommendations: GoalRecommendation[] = [
-    {
-      title: 'Laptop Fund is ahead of pace',
-      text: 'Your current contribution pattern keeps this goal moving steadily and puts you in a good position to finish before the target month if consistency remains high.',
-      tone: 'good',
-    },
-    {
-      title: 'Emergency Fund needs stronger monthly flow',
-      text: 'This goal is large enough that even a small monthly increase could significantly reduce the completion timeline.',
-      tone: 'watch',
-    },
-    {
-      title: 'Try assigning spending leftovers to one primary goal',
-      text: 'Redirecting leftover monthly cash into a single active goal can create faster visible progress and better momentum.',
-      tone: 'tip',
-    },
-  ];
+  goals: Goal[] = [];
+  filteredGoals: Goal[] = [];
+  recommendations: GoalRecommendation[] = [];
+  contributionTotalsByGoal: Record<number, number> = {};
 
   isDrawerOpen = false;
   isEditMode = false;
+  isCreateMode = false;
   selectedGoal: Goal | null = null;
 
-  drawerForm: Omit<Goal, 'id'> = {
-    name: '',
-    targetAmount: 0,
-    savedAmount: 0,
-    monthlyContribution: 0,
-    deadline: '',
-    category: 'General',
+  filters: {
+    search: string;
+    status: GoalStatusFilter;
+    sortBy: GoalSortOption;
+  } = {
+    search: '',
+    status: 'all',
+    sortBy: 'deadline',
   };
 
-  createGoal(): void {
-    const trimmedName = this.form.name.trim();
+  drawerForm: GoalInput = this.getEmptyGoalForm();
 
-    if (
-      !trimmedName ||
-      !this.form.targetAmount ||
-      !this.form.monthlyContribution ||
-      !this.form.deadline
-    ) {
-      return;
-    }
+  constructor(
+    private readonly goalsService: GoalsService,
+    private readonly transactionService: TransactionService,
+    private readonly toastr: ToastrService,
+  ) {}
 
-    const newGoal: Goal = {
-      id: Date.now(),
-      ...this.form,
-      name: trimmedName,
-    };
+  ngOnInit(): void {
+    this.subscription.add(
+      this.goalsService.getGoals().subscribe((goals) => {
+        this.goals = goals;
+        this.applyGoalFilters();
+      }),
+    );
 
-    this.goals = [newGoal, ...this.goals];
+    this.subscription.add(
+      this.goalsService.getRecommendations().subscribe((recommendations) => {
+        this.recommendations = recommendations;
+      }),
+    );
 
-    this.form = {
-      name: '',
-      targetAmount: 0,
-      savedAmount: 0,
-      monthlyContribution: 0,
-      deadline: '',
-      category: 'General',
-    };
+    this.subscription.add(
+      this.transactionService.transactions$.subscribe((transactions) => {
+        this.contributionTotalsByGoal = this.buildContributionTotalsByGoal(transactions);
+      }),
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.subscription.unsubscribe();
+  }
+
+  get activeGoalsCount(): number {
+    return this.goals.filter((goal) => this.getGoalStatus(goal) !== 'completed').length;
+  }
+
+  get completedGoalsCount(): number {
+    return this.goals.filter((goal) => this.getGoalStatus(goal) === 'completed').length;
+  }
+
+  get totalGoalSavings(): number {
+    return this.goals.reduce((sum, goal) => sum + goal.savedAmount, 0);
+  }
+
+  get totalContributedFromTransactions(): number {
+    return Object.values(this.contributionTotalsByGoal).reduce((sum, amount) => sum + amount, 0);
+  }
+
+  openCreateDrawer(): void {
+    this.isDrawerOpen = true;
+    this.isEditMode = true;
+    this.isCreateMode = true;
+    this.selectedGoal = null;
+    this.drawerForm = this.getEmptyGoalForm();
   }
 
   openGoalDrawer(goal: Goal): void {
     this.selectedGoal = goal;
     this.isDrawerOpen = true;
     this.isEditMode = false;
-    this.drawerForm = {
-      name: goal.name,
-      targetAmount: goal.targetAmount,
-      savedAmount: goal.savedAmount,
-      monthlyContribution: goal.monthlyContribution,
-      deadline: goal.deadline,
-      category: goal.category,
-    };
+    this.isCreateMode = false;
+    this.drawerForm = this.mapGoalToForm(goal);
   }
 
-  closeGoalDrawer(): void {
-    this.isDrawerOpen = false;
-    this.isEditMode = false;
-    this.selectedGoal = null;
-    this.resetDrawerForm();
+  openEditDrawer(goal: Goal): void {
+    this.selectedGoal = goal;
+    this.isDrawerOpen = true;
+    this.isEditMode = true;
+    this.isCreateMode = false;
+    this.drawerForm = this.mapGoalToForm(goal);
   }
 
-  enableEditMode(): void {
+  startEditGoal(): void {
     if (!this.selectedGoal) return;
 
-    this.drawerForm = {
-      name: this.selectedGoal.name,
-      targetAmount: this.selectedGoal.targetAmount,
-      savedAmount: this.selectedGoal.savedAmount,
-      monthlyContribution: this.selectedGoal.monthlyContribution,
-      deadline: this.selectedGoal.deadline,
-      category: this.selectedGoal.category,
-    };
-
     this.isEditMode = true;
+    this.isCreateMode = false;
+    this.drawerForm = this.mapGoalToForm(this.selectedGoal);
   }
 
   cancelEditMode(): void {
-    this.isEditMode = false;
-
-    if (this.selectedGoal) {
-      this.drawerForm = {
-        name: this.selectedGoal.name,
-        targetAmount: this.selectedGoal.targetAmount,
-        savedAmount: this.selectedGoal.savedAmount,
-        monthlyContribution: this.selectedGoal.monthlyContribution,
-        deadline: this.selectedGoal.deadline,
-        category: this.selectedGoal.category,
-      };
-    }
-  }
-
-  saveGoalChanges(): void {
-    if (!this.selectedGoal) return;
-
-    const trimmedName = this.drawerForm.name.trim();
-
-    if (
-      !trimmedName ||
-      !this.drawerForm.targetAmount ||
-      !this.drawerForm.monthlyContribution ||
-      !this.drawerForm.deadline
-    ) {
+    if (this.isCreateMode) {
+      this.closeDrawer();
       return;
     }
 
-    this.goals = this.goals.map((goal) =>
-      goal.id === this.selectedGoal!.id
-        ? {
-            ...goal,
-            ...this.drawerForm,
-            name: trimmedName,
-          }
-        : goal,
-    );
-
-    const updatedGoal = this.goals.find((goal) => goal.id === this.selectedGoal!.id) || null;
-    this.selectedGoal = updatedGoal;
     this.isEditMode = false;
+
+    if (this.selectedGoal) {
+      this.drawerForm = this.mapGoalToForm(this.selectedGoal);
+    }
   }
 
-  deleteSelectedGoal(): void {
+  closeDrawer(): void {
+    this.isDrawerOpen = false;
+    this.isEditMode = false;
+    this.isCreateMode = false;
+    this.selectedGoal = null;
+    this.drawerForm = this.getEmptyGoalForm();
+  }
+
+  saveGoalChanges(): void {
+    const payload = this.buildValidatedPayload();
+
+    if (!payload) {
+      this.toastr.error('Please complete all goal fields correctly.', 'Missing Information');
+      return;
+    }
+
+    if (this.isCreateMode) {
+      this.goalsService.addGoal(payload);
+      this.toastr.success(`${payload.name} was created successfully.`, 'Goal Created');
+      this.closeDrawer();
+      return;
+    }
+
     if (!this.selectedGoal) return;
 
-    this.goals = this.goals.filter((goal) => goal.id !== this.selectedGoal!.id);
-    this.closeGoalDrawer();
+    this.goalsService.updateGoal(this.selectedGoal.id, payload);
+    this.selectedGoal = { ...this.selectedGoal, ...payload };
+    this.isEditMode = false;
+
+    this.toastr.success(`${payload.name} was updated successfully.`, 'Goal Updated');
   }
 
-  resetDrawerForm(): void {
-    this.drawerForm = {
-      name: '',
-      targetAmount: 0,
-      savedAmount: 0,
-      monthlyContribution: 0,
-      deadline: '',
-      category: 'General',
+  deleteGoal(): void {
+    if (!this.selectedGoal) return;
+    this.deleteGoalDirect(this.selectedGoal);
+  }
+
+  deleteGoalDirect(goal: Goal): void {
+    const confirmed = window.confirm(`Delete "${goal.name}"?`);
+    if (!confirmed) return;
+
+    this.goalsService.deleteGoal(goal.id);
+
+    if (this.selectedGoal?.id === goal.id) {
+      this.closeDrawer();
+    }
+
+    this.toastr.warning(`${goal.name} was deleted.`, 'Goal Deleted');
+  }
+
+  resetGoalFilters(): void {
+    this.filters = {
+      search: '',
+      status: 'all',
+      sortBy: 'deadline',
     };
+
+    this.applyGoalFilters();
+    this.toastr.info('Goal filters have been reset.', 'Filters Cleared');
+  }
+
+  applyGoalFilters(): void {
+    const search = this.filters.search.trim().toLowerCase();
+
+    let result = [...this.goals];
+
+    if (search) {
+      result = result.filter((goal) => {
+        return (
+          goal.name.toLowerCase().includes(search) || goal.category.toLowerCase().includes(search)
+        );
+      });
+    }
+
+    if (this.filters.status !== 'all') {
+      result = result.filter((goal) => this.getGoalStatus(goal) === this.filters.status);
+    }
+
+    result.sort((a, b) => this.compareGoals(a, b, this.filters.sortBy));
+    this.filteredGoals = result;
+  }
+
+  trackByGoalId(_: number, goal: Goal): number {
+    return goal.id;
   }
 
   getProgressPercent(goal: Goal): number {
@@ -223,102 +249,173 @@ export class Goals {
     return Math.max(goal.targetAmount - goal.savedAmount, 0);
   }
 
-  getMonthsLeft(goal: Goal): number {
-    const remaining = this.getRemainingAmount(goal);
-    if (goal.monthlyContribution <= 0) return 0;
-    return Math.ceil(remaining / goal.monthlyContribution);
+  getContributionFromTransactions(goalId: number): number {
+    return this.contributionTotalsByGoal[goalId] ?? 0;
   }
 
-  getProjectedCompletion(goal: Goal): string {
-    const monthsToGoal = this.getMonthsLeft(goal);
-    const today = new Date();
-    const completionDate = new Date(today.getFullYear(), today.getMonth() + monthsToGoal, 1);
-
-    return completionDate.toLocaleString('en-US', {
-      month: 'short',
-      year: 'numeric',
-    });
-  }
-
-  getDeadlineLabel(goal: Goal): string {
-    const date = new Date(goal.deadline);
-    return date.toLocaleString('en-US', {
-      month: 'short',
-      year: 'numeric',
-    });
-  }
-
-  getGoalStatus(goal: Goal): 'on-track' | 'needs-attention' | 'completed' {
-    const progress = this.getProgressPercent(goal);
-
-    if (progress >= 100 || goal.savedAmount >= goal.targetAmount) {
+  getGoalStatus(goal: Goal): GoalStatus {
+    if (this.getProgressPercent(goal) >= 100) {
       return 'completed';
     }
 
-    const monthsToGoal = this.getMonthsLeft(goal);
-    const today = new Date();
-    const projectedDate = new Date(today.getFullYear(), today.getMonth() + monthsToGoal, 1);
-    const deadlineDate = new Date(goal.deadline);
-
-    return projectedDate <= deadlineDate ? 'on-track' : 'needs-attention';
+    return goal.monthlyContribution >= this.getSuggestedContribution(goal)
+      ? 'on-track'
+      : 'needs-attention';
   }
 
   getGoalStatusLabel(goal: Goal): string {
     const status = this.getGoalStatus(goal);
 
-    if (status === 'completed') return 'Completed';
-    if (status === 'on-track') return 'On track';
-    return 'Needs attention';
+    switch (status) {
+      case 'completed':
+        return 'Completed';
+      case 'on-track':
+        return 'On track';
+      default:
+        return 'Needs attention';
+    }
   }
 
-  getSuggestedContribution(goal: Goal): number {
-    const remainingMonths = this.getMonthsUntilDeadline(goal);
-    const remainingAmount = this.getRemainingAmount(goal);
+  getDeadlineLabel(goal: Goal): string {
+    const date = new Date(goal.deadline);
 
-    if (remainingMonths <= 0) return remainingAmount;
-    return Math.ceil(remainingAmount / remainingMonths);
+    if (isNaN(date.getTime())) {
+      return 'Not set';
+    }
+
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
   }
 
-  getMonthsUntilDeadline(goal: Goal): number {
-    const today = new Date();
-    const deadline = new Date(goal.deadline);
+  getProjectedCompletion(goal: Goal): string {
+    const remaining = this.getRemainingAmount(goal);
 
-    const yearDiff = deadline.getFullYear() - today.getFullYear();
-    const monthDiff = deadline.getMonth() - today.getMonth();
+    if (remaining <= 0) return 'Completed';
+    if (goal.monthlyContribution <= 0) return 'Not enough monthly saving';
 
-    return Math.max(yearDiff * 12 + monthDiff, 0);
-  }
+    const months = Math.ceil(remaining / goal.monthlyContribution);
+    const projectedDate = new Date();
+    projectedDate.setMonth(projectedDate.getMonth() + months);
 
-  getContributionGap(goal: Goal): number {
-    return this.getSuggestedContribution(goal) - goal.monthlyContribution;
-  }
-
-  getCalculatorRemaining(): number {
-    return Math.max(this.calculator.targetAmount - this.calculator.currentSaved, 0);
-  }
-
-  getCalculatorMonths(): number {
-    if (this.calculator.monthlyContribution <= 0) return 0;
-    return Math.ceil(this.getCalculatorRemaining() / this.calculator.monthlyContribution);
-  }
-
-  getCalculatorProjection(): string {
-    const months = this.getCalculatorMonths();
-    const today = new Date();
-    const projected = new Date(today.getFullYear(), today.getMonth() + months, 1);
-
-    return projected.toLocaleString('en-US', {
+    return projectedDate.toLocaleDateString('en-US', {
       month: 'short',
       year: 'numeric',
     });
   }
 
-  getCalculatorProgressPercent(): number {
-    if (!this.calculator.targetAmount) return 0;
-    return Math.min((this.calculator.currentSaved / this.calculator.targetAmount) * 100, 100);
+  getSuggestedContribution(goal: Goal): number {
+    const remaining = this.getRemainingAmount(goal);
+    const deadline = new Date(goal.deadline);
+
+    if (remaining <= 0 || isNaN(deadline.getTime())) {
+      return 0;
+    }
+
+    const today = new Date();
+    const monthsLeft =
+      (deadline.getFullYear() - today.getFullYear()) * 12 +
+      (deadline.getMonth() - today.getMonth());
+
+    if (monthsLeft <= 0) {
+      return remaining;
+    }
+
+    return Math.ceil(remaining / monthsLeft);
   }
 
-  trackByGoalId(index: number, goal: Goal): number {
-    return goal.id;
+  private getEmptyGoalForm(): GoalInput {
+    return {
+      name: '',
+      targetAmount: 0,
+      savedAmount: 0,
+      monthlyContribution: 0,
+      deadline: '',
+      category: 'Other',
+    };
+  }
+
+  private mapGoalToForm(goal: Goal): GoalInput {
+    return {
+      name: goal.name,
+      targetAmount: goal.targetAmount,
+      savedAmount: goal.savedAmount,
+      monthlyContribution: goal.monthlyContribution,
+      deadline: goal.deadline,
+      category: goal.category,
+    };
+  }
+
+  private buildValidatedPayload(): GoalInput | null {
+    const name = this.drawerForm.name.trim();
+    const targetAmount = Number(this.drawerForm.targetAmount);
+    const savedAmount = Number(this.drawerForm.savedAmount);
+    const monthlyContribution = Number(this.drawerForm.monthlyContribution);
+
+    const isValid =
+      !!name &&
+      targetAmount > 0 &&
+      savedAmount >= 0 &&
+      monthlyContribution >= 0 &&
+      !!this.drawerForm.deadline &&
+      !!this.drawerForm.category;
+
+    if (!isValid) return null;
+
+    return {
+      name,
+      targetAmount,
+      savedAmount,
+      monthlyContribution,
+      deadline: this.drawerForm.deadline,
+      category: this.drawerForm.category,
+    };
+  }
+
+  private compareGoals(a: Goal, b: Goal, sortBy: GoalSortOption): number {
+    switch (sortBy) {
+      case 'progress-high':
+        return this.getProgressPercent(b) - this.getProgressPercent(a);
+
+      case 'progress-low':
+        return this.getProgressPercent(a) - this.getProgressPercent(b);
+
+      case 'target-high':
+        return b.targetAmount - a.targetAmount;
+
+      case 'name':
+        return a.name.localeCompare(b.name);
+
+      case 'deadline':
+      default:
+        return this.compareDeadlines(a.deadline, b.deadline);
+    }
+  }
+
+  private compareDeadlines(a: string, b: string): number {
+    const aTime = new Date(a).getTime();
+    const bTime = new Date(b).getTime();
+
+    const aValid = !isNaN(aTime);
+    const bValid = !isNaN(bTime);
+
+    if (aValid && bValid) return aTime - bTime;
+    if (aValid) return -1;
+    if (bValid) return 1;
+    return 0;
+  }
+
+  private buildContributionTotalsByGoal(
+    transactions: FinanceTransaction[],
+  ): Record<number, number> {
+    return transactions.reduce<Record<number, number>>((acc, transaction) => {
+      if (transaction.isGoalContribution && transaction.goalId && transaction.amount > 0) {
+        acc[transaction.goalId] = (acc[transaction.goalId] ?? 0) + transaction.amount;
+      }
+
+      return acc;
+    }, {});
   }
 }

@@ -383,3 +383,14 @@
         height: 260px;
     }
 }
+
+.simulator-summary-card {
+    padding: 1rem 1.15rem;
+}
+
+.simulator-summary-text {
+    margin: 0;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    line-height: 1.6;
+}

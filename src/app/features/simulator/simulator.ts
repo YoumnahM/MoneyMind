@@ -1,98 +1,92 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ChartConfiguration, ChartData } from 'chart.js';
 import { BaseChartDirective } from 'ng2-charts';
+import { Subscription } from 'rxjs';
+
+import { Goal } from '../../model/goals.model';
+import { ScenarioCategory } from '../../model/simulator.model';
+import { SimulatorService } from '../../services/simulator.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-simulator',
+  standalone: true,
   imports: [CommonModule, FormsModule, BaseChartDirective],
   templateUrl: './simulator.html',
   styleUrl: './simulator.css',
 })
-export class Simulator {
-  monthlyIncome = 42000;
-  currentGoalSaved = 38000;
-  targetGoal = 60000;
-  currentMonthlyGoalContribution = 7200;
+export class Simulator implements OnInit, OnDestroy {
+  private subscription = new Subscription();
 
-  categories: ScenarioCategory[] = [
-    {
-      key: 'food',
-      name: 'Food',
-      amount: 6200,
-      colorClass: 'slider-food',
-      min: 0,
-      max: 12000,
-      step: 100
-    },
-    {
-      key: 'transport',
-      name: 'Transport',
-      amount: 2100,
-      colorClass: 'slider-transport',
-      min: 0,
-      max: 6000,
-      step: 100
-    },
-    {
-      key: 'entertainment',
-      name: 'Entertainment',
-      amount: 2950,
-      colorClass: 'slider-entertainment',
-      min: 0,
-      max: 8000,
-      step: 100
-    },
-    {
-      key: 'shopping',
-      name: 'Shopping',
-      amount: 1780,
-      colorClass: 'slider-shopping',
-      min: 0,
-      max: 7000,
-      step: 100
-    }
-  ];
+  selectedGoal: Goal | null = null;
 
-  scenarioValues: Record<string, number> = {
-    food: 6200,
-    transport: 2100,
-    entertainment: 2950,
-    shopping: 1780
-  };
+  monthlyIncome = 0;
+  currentGoalSaved = 0;
+  targetGoal = 0;
+  currentMonthlyGoalContribution = 0;
 
-  baselineValues: Record<string, number> = {
-    food: 6200,
-    transport: 2100,
-    entertainment: 2950,
-    shopping: 1780
-  };
+  categories: ScenarioCategory[] = [];
+  scenarioValues: Record<string, number> = {};
+  baselineValues: Record<string, number> = {};
 
   comparisonChartType: 'bar' = 'bar';
+  comparisonChartData: ChartData<'bar'> = {
+    labels: [],
+    datasets: [],
+  };
 
-  get baselineTotalExpenses(): number {
+  comparisonChartOptions: ChartConfiguration<'bar'>['options'];
+
+  constructor(private simulatorService: SimulatorService, private router: Router) {
+    this.comparisonChartOptions = this.simulatorService.getComparisonChartOptions();
+  }
+
+  ngOnInit(): void {
+    this.subscription.add(
+      this.simulatorService.getBaseData().subscribe((data) => {
+        this.selectedGoal = data.selectedGoal;
+        this.monthlyIncome = data.monthlyIncome;
+        this.currentGoalSaved = data.currentGoalSaved;
+        this.targetGoal = data.targetGoal;
+        this.currentMonthlyGoalContribution = data.currentMonthlyGoalContribution;
+        this.categories = data.categories;
+        this.baselineValues = { ...data.baselineValues };
+
+        this.scenarioValues = { ...data.baselineValues };
+
+        this.updateChart();
+      }),
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.subscription.unsubscribe();
+  }
+
+  get currentSpending(): number {
     return Object.values(this.baselineValues).reduce((sum, value) => sum + value, 0);
   }
 
-  get scenarioTotalExpenses(): number {
+  get plannedSpending(): number {
     return Object.values(this.scenarioValues).reduce((sum, value) => sum + value, 0);
   }
 
-  get baselineLeftover(): number {
-    return this.monthlyIncome - this.baselineTotalExpenses;
+  get currentFreeMoney(): number {
+    return this.monthlyIncome - this.currentSpending;
   }
 
-  get scenarioLeftover(): number {
-    return this.monthlyIncome - this.scenarioTotalExpenses;
+  get newFreeMoney(): number {
+    return this.monthlyIncome - this.plannedSpending;
   }
 
-  get monthlyImprovement(): number {
-    return this.scenarioLeftover - this.baselineLeftover;
+  get extraSavings(): number {
+    return this.newFreeMoney - this.currentFreeMoney;
   }
 
-  get recommendedGoalContribution(): number {
-    return this.currentMonthlyGoalContribution + Math.max(this.monthlyImprovement, 0);
+  get newGoalContribution(): number {
+    return this.currentMonthlyGoalContribution + Math.max(this.extraSavings, 0);
   }
 
   get goalRemaining(): number {
@@ -100,140 +94,128 @@ export class Simulator {
   }
 
   get currentMonthsToGoal(): number {
-    if (this.currentMonthlyGoalContribution <= 0) return 0;
+    if (this.currentMonthlyGoalContribution <= 0) {
+      return 0;
+    }
+
     return Math.ceil(this.goalRemaining / this.currentMonthlyGoalContribution);
   }
 
-  get projectedMonthsToGoal(): number {
-    if (this.recommendedGoalContribution <= 0) return 0;
-    return Math.ceil(this.goalRemaining / this.recommendedGoalContribution);
+  get newMonthsToGoal(): number {
+    if (this.newGoalContribution <= 0) {
+      return 0;
+    }
+
+    return Math.ceil(this.goalRemaining / this.newGoalContribution);
   }
 
   get monthsSaved(): number {
-    return Math.max(this.currentMonthsToGoal - this.projectedMonthsToGoal, 0);
+    return Math.max(this.currentMonthsToGoal - this.newMonthsToGoal, 0);
   }
 
   get currentCompletionPercent(): number {
+    if (!this.targetGoal) {
+      return 0;
+    }
+
     return Math.min((this.currentGoalSaved / this.targetGoal) * 100, 100);
   }
 
   get projectedCompletionNextMonthPercent(): number {
-    const projectedSaved = this.currentGoalSaved + this.recommendedGoalContribution;
+    if (!this.targetGoal) {
+      return 0;
+    }
+
+    const projectedSaved = this.currentGoalSaved + this.newGoalContribution;
+
     return Math.min((projectedSaved / this.targetGoal) * 100, 100);
   }
 
-  get projectedGoalMonthLabel(): string {
-    const today = new Date();
-    const projected = new Date(today.getFullYear(), today.getMonth() + this.projectedMonthsToGoal, 1);
-    return projected.toLocaleString('en-US', { month: 'short', year: 'numeric' });
-  }
-
   get currentGoalMonthLabel(): string {
+    if (!this.currentMonthsToGoal) return 'Not available';
+
     const today = new Date();
     const current = new Date(today.getFullYear(), today.getMonth() + this.currentMonthsToGoal, 1);
-    return current.toLocaleString('en-US', { month: 'short', year: 'numeric' });
+
+    return current.toLocaleString('en-US', {
+      month: 'short',
+      year: 'numeric',
+    });
+  }
+
+  get projectedGoalMonthLabel(): string {
+    if (!this.newMonthsToGoal) return 'Not available';
+
+    const today = new Date();
+    const projected = new Date(today.getFullYear(), today.getMonth() + this.newMonthsToGoal, 1);
+
+    return projected.toLocaleString('en-US', {
+      month: 'short',
+      year: 'numeric',
+    });
+  }
+
+  get simulatorMessage(): string {
+    if (!this.selectedGoal) {
+      return 'Add a savings goal to see how your spending changes could affect your timeline.';
+    }
+
+    if (this.extraSavings > 0 && this.monthsSaved > 0) {
+      return `You could free up Rs ${this.extraSavings.toLocaleString()} per month and reach ${this.selectedGoal.name} ${this.monthsSaved} month(s) sooner.`;
+    }
+
+    if (this.extraSavings > 0) {
+      return `You could free up Rs ${this.extraSavings.toLocaleString()} per month for ${this.selectedGoal.name}.`;
+    }
+
+    if (this.extraSavings < 0) {
+      return `This plan leaves you with Rs ${Math.abs(this.extraSavings).toLocaleString()} less each month.`;
+    }
+
+    return 'Adjust the sliders to test a new monthly plan.';
   }
 
   updateScenario(key: string, value: number): void {
-    this.scenarioValues[key] = Number(value);
+    this.scenarioValues = {
+      ...this.scenarioValues,
+      [key]: Number(value),
+    };
+
+    this.updateChart();
   }
 
   resetScenario(): void {
     this.scenarioValues = { ...this.baselineValues };
+    this.updateChart();
   }
 
   applySmartSaverPreset(): void {
     this.scenarioValues = {
       ...this.scenarioValues,
-      food: Math.max(this.baselineValues['food'] - 800, 0),
-      entertainment: Math.max(this.baselineValues['entertainment'] - 600, 0),
-      shopping: Math.max(this.baselineValues['shopping'] - 500, 0)
+      food: Math.max((this.baselineValues['food'] || 0) - 800, 0),
+      entertainment: Math.max((this.baselineValues['entertainment'] || 0) - 600, 0),
+      shopping: Math.max((this.baselineValues['shopping'] || 0) - 500, 0),
     };
+
+    this.updateChart();
   }
 
-  get comparisonChartData(): ChartData<'bar'> {
-    return {
-      labels: ['Expenses', 'Left to Save', 'Goal Contribution'],
-      datasets: [
-        {
-          label: 'Before',
-          data: [
-            this.baselineTotalExpenses,
-            this.baselineLeftover,
-            this.currentMonthlyGoalContribution
-          ],
-          borderRadius: 10,
-          maxBarThickness: 34,
-          backgroundColor: 'rgba(125, 211, 252, 0.7)'
-        },
-        {
-          label: 'After',
-          data: [
-            this.scenarioTotalExpenses,
-            this.scenarioLeftover,
-            this.recommendedGoalContribution
-          ],
-          borderRadius: 10,
-          maxBarThickness: 34,
-          backgroundColor: 'rgba(167, 243, 208, 0.75)'
-        }
-      ]
-    };
+  trackByCategory(index: number, category: ScenarioCategory): string {
+    return category.key;
   }
 
-  comparisonChartOptions: ChartConfiguration<'bar'>['options'] = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        labels: {
-          color: '#e6edf6',
-          boxWidth: 12,
-          boxHeight: 12,
-          useBorderRadius: true,
-          borderRadius: 4
-        }
-      },
-      tooltip: {
-        backgroundColor: 'rgba(15, 23, 42, 0.95)',
-        borderColor: 'rgba(255,255,255,0.08)',
-        borderWidth: 1,
-        titleColor: '#e6edf6',
-        bodyColor: '#9aa6b2',
-        padding: 12,
-        callbacks: {
-          label: (context) => {
-            const value = context.parsed.y ?? 0;
-            return `${context.dataset.label}: Rs ${value.toLocaleString()}`;
-          }
-        }
-      }
-    },
-    scales: {
-      x: {
-        ticks: {
-          color: '#9aa6b2'
-        },
-        grid: {
-          display: false
-        },
-        border: {
-          display: false
-        }
-      },
-      y: {
-        beginAtZero: true,
-        ticks: {
-          color: '#9aa6b2',
-          callback: (value) => `Rs ${Number(value)}`
-        },
-        grid: {
-          color: 'rgba(255,255,255,0.06)'
-        },
-        border: {
-          display: false
-        }
-      }
-    }
-  };
+  private updateChart(): void {
+    this.comparisonChartData = this.simulatorService.getComparisonChartData(
+      this.currentSpending,
+      this.plannedSpending,
+      this.currentFreeMoney,
+      this.newFreeMoney,
+      this.currentMonthlyGoalContribution,
+      this.newGoalContribution,
+    );
+  }
+
+  goToGoals(): void {
+    this.router.navigate(['/goals']);
+  }
 }

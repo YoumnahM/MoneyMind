@@ -208,10 +208,38 @@ input[type="range"]::-webkit-slider-thumb {
 /* TOAST OVERRIDE */
 /* ============================= */
 
+/* Base toast (glass style) */
 .toast-container .ngx-toastr {
-  background: rgba(15, 23, 42, 0.9);
-  border: 1px solid var(--glass-border);
   backdrop-filter: blur(12px);
   border-radius: 12px;
   color: var(--text-primary);
+  border: 1px solid var(--glass-border);
+}
+
+/* SUCCESS (green) */
+.toast-success {
+  background: rgba(134, 239, 172, 0.12) !important;
+  border: 1px solid rgba(134, 239, 172, 0.3) !important;
+  color: var(--accent-success) !important;
+}
+
+/* ERROR (red) */
+.toast-error {
+  background: rgba(252, 165, 165, 0.12) !important;
+  border: 1px solid rgba(252, 165, 165, 0.3) !important;
+  color: var(--accent-danger) !important;
+}
+
+/* WARNING (yellow) */
+.toast-warning {
+  background: rgba(252, 211, 77, 0.12) !important;
+  border: 1px solid rgba(252, 211, 77, 0.3) !important;
+  color: var(--accent-warning) !important;
+}
+
+/* INFO (blue) */
+.toast-info {
+  background: rgba(125, 211, 252, 0.12) !important;
+  border: 1px solid rgba(125, 211, 252, 0.3) !important;
+  color: var(--accent-primary) !important;
 }

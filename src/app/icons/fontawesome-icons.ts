@@ -12,7 +12,10 @@ import {
   faArrowDown,
   faArrowTrendUp,
   faSliders,
-  faXmark
+  faXmark,
+  faPen,
+  faTrash,
+  faFolderOpen
 } from '@fortawesome/free-solid-svg-icons';
 
 export const faIcons = {
@@ -33,4 +36,7 @@ export const faIcons = {
   simulator: faSliders,
   trend: faArrowTrendUp,
   close: faXmark,
+  edit: faPen,
+  delete: faTrash,
+  empty: faFolderOpen,
 };

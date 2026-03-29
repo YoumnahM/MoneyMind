@@ -2,25 +2,47 @@
     <!-- Row 1 -->
     <div class="hero">
         <section class="hero-banner glass">
-            <p class="hero-kicker">Financial behavior overview</p>
-            <h1 class="hero-title">Your money habits are improving steadily.</h1>
+            <p class="hero-kicker">Money overview</p>
+            <h1 class="hero-title">Your money habits are getting better.</h1>
             <p class="hero-text">
-                MoneyMind detected healthier saving behavior this month, lower volatility
-                in spending, and stronger goal momentum across your recent activity.
+                You are saving more steadily, spending is easier to track, and your recent activity looks more balanced.
             </p>
 
             <div class="hero-actions">
-                <button class="btn btn-primary">View Insights</button>
-                <button class="hero-secondary-btn">Open Simulator</button>
+                <button class="btn btn-primary" type="button" (click)="goToInsights()">
+                    View insights
+                </button>
+
+                <button class="hero-secondary-btn" type="button" (click)="goToSimulator()">
+                    Open simulator
+                </button>
             </div>
         </section>
 
         <section class="hero-score glass">
-            <p class="hero-score-label">Health Score</p>
-            <div class="hero-score-ring">
-                <span>82</span>
+            <p class="hero-score-label">Health score</p>
+
+            <div class="hero-score-ring" [ngClass]="{
+          'score-excellent': healthScore.status === 'excellent',
+          'score-good': healthScore.status === 'good',
+          'score-watch': healthScore.status === 'watch',
+          'score-critical': healthScore.status === 'critical'
+        }">
+                <svg class="progress-ring" width="140" height="140" viewBox="0 0 140 140">
+                    <circle class="progress-ring-bg" cx="70" cy="70" r="54"></circle>
+
+                    <circle class="progress-ring-value" cx="70" cy="70" r="54"
+                        [attr.stroke-dasharray]="healthScoreCircumference" [attr.stroke-dashoffset]="healthScoreOffset">
+                    </circle>
+                </svg>
+
+                <div class="hero-score-center">
+                    <span class="hero-score-number">{{ healthScore.score }}</span>
+                    <small>/ 100</small>
+                </div>
             </div>
-            <p class="hero-score-text">Stable and improving</p>
+
+            <p class="hero-score-text">{{ healthScore.label }}</p>
         </section>
     </div>
 
@@ -47,8 +69,8 @@
         <section class="chart-card glass">
             <div class="section-head">
                 <div>
-                    <p class="section-kicker">Trend analysis</p>
-                    <h2 class="section-title">Spending trend chart</h2>
+                    <p class="section-kicker">Spending</p>
+                    <h2 class="section-title">Spending over time</h2>
                 </div>
             </div>
 
@@ -61,13 +83,17 @@
         <section class="insights-panel glass">
             <div class="section-head">
                 <div>
-                    <p class="section-kicker">Smart signals</p>
-                    <h2 class="section-title">Insights</h2>
+                    <p class="section-kicker">Quick insights</p>
+                    <h2 class="section-title">What to notice</h2>
                 </div>
+
+                <button class="text-link-btn" type="button" (click)="goToInsights()">
+                    View all
+                </button>
             </div>
 
             <div class="insight-list">
-                <article class="insight-card" *ngFor="let insight of insights">
+                <article class="insight-card" *ngFor="let insight of insights | slice:0:3">
                     <span class="insight-tag">{{ insight.tag }}</span>
                     <h3 class="insight-title">{{ insight.title }}</h3>
                     <p class="insight-text">{{ insight.text }}</p>
@@ -78,40 +104,78 @@
 
     <!-- Row 4 -->
     <div class="bottom-grid">
-        <section class="goal-card glass">
+        <section class="goal-card glass" *ngIf="latestGoal; else noGoal">
             <div class="section-head">
                 <div>
-                    <p class="section-kicker">Goal progress</p>
-                    <h2 class="section-title">Laptop Fund</h2>
+                    <p class="section-kicker">Latest goal</p>
+                    <h2 class="section-title">{{ latestGoal.name }}</h2>
                 </div>
-                <span class="goal-amount">Rs 38,000 / Rs 60,000</span>
+
+                <button class="text-link-btn" type="button" (click)="goToGoals()">
+                    View all goals
+                </button>
+            </div>
+
+            <div class="goal-summary-row">
+                <span class="goal-amount">
+                    {{ formatCurrency(latestGoal.savedAmount) }} / {{ formatCurrency(latestGoal.targetAmount) }}
+                </span>
+
+                <span class="goal-badge" [class.goal-badge-positive]="isGoalPositive(latestGoal)">
+                    {{ getGoalStatus(latestGoal) }}
+                </span>
             </div>
 
             <div class="goal-progress">
-                <div class="goal-progress-bar"></div>
+                <div class="goal-progress-bar" [style.width.%]="getGoalProgress(latestGoal)"></div>
+            </div>
+
+            <div class="goal-progress-caption">
+                {{ getGoalProgress(latestGoal) | number:'1.0-0' }}% saved
             </div>
 
             <div class="goal-meta">
                 <div>
                     <p class="goal-meta-label">Target date</p>
-                    <p class="goal-meta-value">Sep 2026</p>
+                    <p class="goal-meta-value">{{ formatDeadline(latestGoal.deadline) }}</p>
                 </div>
+
                 <div>
-                    <p class="goal-meta-label">Monthly pace</p>
-                    <p class="goal-meta-value">Rs 7,200</p>
+                    <p class="goal-meta-label">Saving each month</p>
+                    <p class="goal-meta-value">{{ formatCurrency(latestGoal.monthlyContribution) }}</p>
                 </div>
+
                 <div>
-                    <p class="goal-meta-label">Projection</p>
-                    <p class="goal-meta-value positive-text">On track</p>
+                    <p class="goal-meta-label">Remaining</p>
+                    <p class="goal-meta-value">{{ formatCurrency(getGoalRemaining(latestGoal)) }}</p>
                 </div>
             </div>
         </section>
 
+        <ng-template #noGoal>
+            <section class="goal-card glass">
+                <div class="section-head">
+                    <div>
+                        <p class="section-kicker">Goals</p>
+                        <h2 class="section-title">No goals yet</h2>
+                    </div>
+                </div>
+
+                <p class="insight-text">
+                    Add your first savings goal to track progress here.
+                </p>
+
+                <button class="btn btn-primary" type="button" (click)="goToGoals()">
+                    Create a goal
+                </button>
+            </section>
+        </ng-template>
+
         <section class="categories-card glass">
             <div class="section-head">
                 <div>
-                    <p class="section-kicker">Category analysis</p>
-                    <h2 class="section-title">Top categories</h2>
+                    <p class="section-kicker">Categories</p>
+                    <h2 class="section-title">Top spending categories</h2>
                 </div>
             </div>
 
@@ -122,6 +186,7 @@
                             <p class="category-name">{{ category.name }}</p>
                             <p class="category-amount">{{ category.amount }}</p>
                         </div>
+
                         <span class="category-percent">{{ category.progress }}%</span>
                     </div>
 

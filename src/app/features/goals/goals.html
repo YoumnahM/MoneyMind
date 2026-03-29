@@ -1,441 +1,365 @@
 <section class="goals-page">
-    <!-- Topbar -->
-    <section class="goals-topbar">
-        <div>
-            <p class="goals-subtitle">
-                Create savings goals, track progress, and understand what pace is needed to reach your targets on time.
-            </p>
-        </div>
-
-        <div class="topbar-summary glass">
-            <span class="summary-label">Active goals</span>
-            <strong class="summary-value">{{ goals.length }}</strong>
-        </div>
-    </section>
-
-    <!-- Goal cards -->
-    <section class="goal-cards-section">
-        <div class="section-head">
-            <div>
-                <p class="section-kicker">Goal cards</p>
-                <h2 class="section-title">Your active targets</h2>
-            </div>
-        </div>
-
-        <div class="goal-cards-grid">
-            <article class="goal-card glass" *ngFor="let goal of goals; trackBy: trackByGoalId"
-                (click)="openGoalDrawer(goal)">
-                <div class="goal-card-top">
-                    <div>
-                        <p class="goal-category">{{ goal.category }}</p>
-                        <h3 class="goal-name">{{ goal.name }}</h3>
-                    </div>
-
-                    <span class="goal-status" [ngClass]="{
-              'status-completed': getGoalStatus(goal) === 'completed',
-              'status-on-track': getGoalStatus(goal) === 'on-track',
-              'status-needs-attention': getGoalStatus(goal) === 'needs-attention'
-            }">
-                        {{ getGoalStatusLabel(goal) }}
-                    </span>
-                </div>
-
-                <div class="goal-card-amounts">
-                    <div>
-                        <span class="amount-label">Saved</span>
-                        <strong class="amount-value">Rs {{ goal.savedAmount | number }}</strong>
-                    </div>
-
-                    <div>
-                        <span class="amount-label">Target</span>
-                        <strong class="amount-value">Rs {{ goal.targetAmount | number }}</strong>
-                    </div>
-                </div>
-
-                <div class="goal-progress">
-                    <div class="goal-progress-head">
-                        <span>Progress</span>
-                        <strong>{{ getProgressPercent(goal) | number:'1.0-0' }}%</strong>
-                    </div>
-
-                    <div class="goal-progress-track">
-                        <div class="goal-progress-bar" [style.width.%]="getProgressPercent(goal)"></div>
-                    </div>
-                </div>
-
-                <div class="goal-meta-grid">
-                    <div class="goal-meta-item">
-                        <span class="meta-label">Monthly contribution</span>
-                        <strong class="meta-value">Rs {{ goal.monthlyContribution | number }}</strong>
-                    </div>
-
-                    <div class="goal-meta-item">
-                        <span class="meta-label">Remaining</span>
-                        <strong class="meta-value">Rs {{ getRemainingAmount(goal) | number }}</strong>
-                    </div>
-
-                    <div class="goal-meta-item">
-                        <span class="meta-label">Deadline</span>
-                        <strong class="meta-value">{{ getDeadlineLabel(goal) }}</strong>
-                    </div>
-
-                    <div class="goal-meta-item">
-                        <span class="meta-label">Projected finish</span>
-                        <strong class="meta-value">{{ getProjectedCompletion(goal) }}</strong>
-                    </div>
-                </div>
-            </article>
-        </div>
-    </section>
-
-    <!-- Middle grid -->
-    <div class="goals-main-grid">
-        <section class="create-goal-panel glass">
-            <div class="section-head">
-                <div>
-                    <p class="section-kicker">Create goal form</p>
-                    <h2 class="section-title">Add a new target</h2>
-                </div>
-            </div>
-
-            <form class="goal-form" (ngSubmit)="createGoal()">
-                <div class="form-grid">
-                    <div class="form-field full">
-                        <label for="goal-name">Goal name</label>
-                        <input id="goal-name" class="input" type="text" name="goal-name" [(ngModel)]="form.name"
-                            placeholder="e.g. New phone, Trip, Emergency fund" required />
-                    </div>
-
-                    <div class="form-field">
-                        <label for="goal-target">Target amount</label>
-                        <input id="goal-target" class="input" type="number" name="goal-target"
-                            [(ngModel)]="form.targetAmount" required />
-                    </div>
-
-                    <div class="form-field">
-                        <label for="goal-saved">Already saved</label>
-                        <input id="goal-saved" class="input" type="number" name="goal-saved"
-                            [(ngModel)]="form.savedAmount" />
-                    </div>
-
-                    <div class="form-field">
-                        <label for="goal-monthly">Monthly contribution</label>
-                        <input id="goal-monthly" class="input" type="number" name="goal-monthly"
-                            [(ngModel)]="form.monthlyContribution" required />
-                    </div>
-
-                    <div class="form-field">
-                        <label for="goal-deadline">Deadline</label>
-                        <input id="goal-deadline" class="input" type="date" name="goal-deadline"
-                            [(ngModel)]="form.deadline" required />
-                    </div>
-
-                    <div class="form-field full">
-                        <label for="goal-category">Category</label>
-                        <select id="goal-category" class="input" name="goal-category" [(ngModel)]="form.category">
-                            <option value="General">General</option>
-                            <option value="Tech">Tech</option>
-                            <option value="Safety">Safety</option>
-                            <option value="Lifestyle">Lifestyle</option>
-                            <option value="Travel">Travel</option>
-                            <option value="Education">Education</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="form-actions">
-                    <button class="btn btn-primary" type="submit">Create Goal</button>
-                </div>
-            </form>
-        </section>
-
-        <section class="progress-tracker glass">
-            <div class="section-head">
-                <div>
-                    <p class="section-kicker">Progress tracker</p>
-                    <h2 class="section-title">Goal momentum snapshot</h2>
-                </div>
-            </div>
-
-            <div class="tracker-list">
-                <article class="tracker-row" *ngFor="let goal of goals; trackBy: trackByGoalId">
-                    <div class="tracker-row-top">
-                        <div>
-                            <h3 class="tracker-name">{{ goal.name }}</h3>
-                            <p class="tracker-subtext">
-                                Rs {{ goal.savedAmount | number }} saved of Rs {{ goal.targetAmount | number }}
-                            </p>
-                        </div>
-
-                        <strong class="tracker-percent">
-                            {{ getProgressPercent(goal) | number:'1.0-0' }}%
-                        </strong>
-                    </div>
-
-                    <div class="tracker-track">
-                        <div class="tracker-bar" [style.width.%]="getProgressPercent(goal)"></div>
-                    </div>
-                </article>
-            </div>
-        </section>
+  <header class="goals-header">
+    <div class="hero-copy">
+      <h1 class="goals-title">Plan and track your financial targets</h1>
+      <p class="goals-subtitle">
+        Create savings goals, monitor progress, and see how much each goal received from linked transactions.
+      </p>
     </div>
 
-    <!-- Bottom grid -->
-    <div class="goals-bottom-grid">
-        <section class="recommendations-panel glass">
-            <div class="section-head">
-                <div>
-                    <p class="section-kicker">Recommendation list</p>
-                    <h2 class="section-title">Smart suggestions</h2>
-                </div>
-            </div>
+    <div class="header-actions">
+      <button class="btn btn-primary add-goal-btn" type="button" (click)="openCreateDrawer()">
+        <fa-icon [icon]="icons.plus"></fa-icon>
+        <span>Add New Goal</span>
+      </button>
+    </div>
+  </header>
 
-            <div class="recommendation-list">
-                <article class="recommendation-card" *ngFor="let recommendation of recommendations"
-                    [ngClass]="'recommendation-' + recommendation.tone">
-                    <h3 class="recommendation-title">{{ recommendation.title }}</h3>
-                    <p class="recommendation-text">{{ recommendation.text }}</p>
-                </article>
-            </div>
-        </section>
+  <section class="goals-kpi-grid">
+    <article class="kpi-card kpi-primary glass">
+      <div class="kpi-icon">
+        <fa-icon [icon]="icons.goal"></fa-icon>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">Active goals</span>
+        <strong class="kpi-value">{{ activeGoalsCount }}</strong>
+      </div>
+    </article>
 
-        <section class="target-calculator glass">
-            <div class="section-head">
-                <div>
-                    <p class="section-kicker">Target calculator</p>
-                    <h2 class="section-title">Estimate your goal timeline</h2>
-                </div>
-            </div>
+    <article class="kpi-card kpi-success glass">
+      <div class="kpi-icon">
+        <fa-icon [icon]="icons.wallet"></fa-icon>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">Total saved</span>
+        <strong class="kpi-value">Rs {{ totalGoalSavings | number }}</strong>
+      </div>
+    </article>
 
-            <div class="calculator-grid">
-                <div class="form-field">
-                    <label for="calc-target">Target amount</label>
-                    <input id="calc-target" class="input" type="number" [(ngModel)]="calculator.targetAmount"
-                        name="calc-target" />
-                </div>
+    <article class="kpi-card kpi-warning glass">
+      <div class="kpi-icon">
+        <fa-icon [icon]="icons.trend"></fa-icon>
+      </div>
+      <div class="kpi-content">
+        <span class="kpi-label">From transactions</span>
+        <strong class="kpi-value">Rs {{ totalContributedFromTransactions | number }}</strong>
+      </div>
+    </article>
+  </section>
 
-                <div class="form-field">
-                    <label for="calc-saved">Current saved</label>
-                    <input id="calc-saved" class="input" type="number" [(ngModel)]="calculator.currentSaved"
-                        name="calc-saved" />
-                </div>
+  <section class="goal-toolbar glass">
+    <div class="goal-toolbar-grid">
+      <div class="form-field">
+        <label for="goalSearch">Search</label>
+        <input id="goalSearch" class="input" type="text" placeholder="Search by goal or category"
+          [(ngModel)]="filters.search" (ngModelChange)="applyGoalFilters()" />
+      </div>
 
-                <div class="form-field full">
-                    <label for="calc-monthly">Monthly contribution</label>
-                    <input id="calc-monthly" class="input" type="number" [(ngModel)]="calculator.monthlyContribution"
-                        name="calc-monthly" />
-                </div>
-            </div>
+      <div class="form-field">
+        <label for="goalStatus">Status</label>
+        <select id="goalStatus" class="input" [(ngModel)]="filters.status" (change)="applyGoalFilters()">
+          <option value="all">All goals</option>
+          <option value="completed">Completed</option>
+          <option value="on-track">On track</option>
+          <option value="needs-attention">Needs attention</option>
+        </select>
+      </div>
 
-            <div class="calculator-results">
-                <article class="calculator-card">
-                    <span class="calculator-label">Remaining</span>
-                    <strong class="calculator-value">
-                        Rs {{ getCalculatorRemaining() | number }}
-                    </strong>
-                </article>
+      <div class="form-field">
+        <label for="goalSort">Sort by</label>
+        <select id="goalSort" class="input" [(ngModel)]="filters.sortBy" (change)="applyGoalFilters()">
+          <option value="deadline">Closest deadline</option>
+          <option value="progress-high">Highest progress</option>
+          <option value="progress-low">Lowest progress</option>
+          <option value="target-high">Highest target</option>
+          <option value="name">Name</option>
+        </select>
+      </div>
 
-                <article class="calculator-card">
-                    <span class="calculator-label">Estimated months</span>
-                    <strong class="calculator-value">
-                        {{ getCalculatorMonths() }}
-                    </strong>
-                </article>
+      <div class="toolbar-actions">
+        <button class="btn toolbar-reset-btn" type="button" (click)="resetGoalFilters()">
+          Reset
+        </button>
+      </div>
+    </div>
+  </section>
 
-                <article class="calculator-card">
-                    <span class="calculator-label">Projected finish</span>
-                    <strong class="calculator-value positive-text">
-                        {{ getCalculatorProjection() }}
-                    </strong>
-                </article>
-            </div>
+  <section class="goals-table-panel glass">
+    <div class="section-head">
+      <div>
+        <p class="section-kicker">Goal list</p>
+        <h2 class="section-title">All goals</h2>
+      </div>
 
-            <div class="calculator-progress">
-                <div class="goal-progress-head">
-                    <span>Current progress</span>
-                    <strong>{{ getCalculatorProgressPercent() | number:'1.0-0' }}%</strong>
-                </div>
-
-                <div class="goal-progress-track">
-                    <div class="goal-progress-bar calculator-bar" [style.width.%]="getCalculatorProgressPercent()">
-                    </div>
-                </div>
-            </div>
-        </section>
+      <span class="table-count">
+        {{ filteredGoals.length }} goal{{ filteredGoals.length === 1 ? '' : 's' }}
+      </span>
     </div>
 
-    <!-- Drawer -->
-    <div class="drawer-backdrop" *ngIf="isDrawerOpen" (click)="closeGoalDrawer()"></div>
+    <div class="goals-table-wrap desktop-table">
+      <table class="goals-table">
+        <thead>
+          <tr>
+            <th>Goal</th>
+            <th>Category</th>
+            <th>Saved</th>
+            <th>Target</th>
+            <th>Progress</th>
+            <th>Deadline</th>
+            <th>Status</th>
+            <th class="actions-col">Actions</th>
+          </tr>
+        </thead>
 
-    <aside class="goal-drawer" [class.open]="isDrawerOpen">
-        <ng-container *ngIf="selectedGoal as goal">
-            <div class="drawer-header">
-                <div>
-                    <p class="drawer-kicker">
-                        {{ isEditMode ? 'Edit goal' : 'Goal details' }}
-                    </p>
-                    <h2 class="drawer-title">
-                        {{ isEditMode ? 'Update goal' : goal.name }}
-                    </h2>
-                    <p class="drawer-category">
-                        {{ isEditMode ? drawerForm.category : goal.category }}
-                    </p>
+        <tbody>
+          <tr *ngFor="let goal of filteredGoals; trackBy: trackByGoalId">
+            <td>
+              <button class="goal-name-btn" type="button" (click)="openGoalDrawer(goal)">
+                {{ goal.name }}
+              </button>
+            </td>
+            <td>{{ goal.category }}</td>
+            <td>Rs {{ goal.savedAmount | number }}</td>
+            <td>Rs {{ goal.targetAmount | number }}</td>
+            <td>
+              <div class="table-progress">
+                <div class="table-progress-bar">
+                  <div class="table-progress-fill" [style.width.%]="getProgressPercent(goal)"></div>
                 </div>
-
-                <button class="drawer-close-btn" type="button" (click)="closeGoalDrawer()">
-                    ✕
+                <span class="table-progress-text">
+                  {{ getProgressPercent(goal) | number:'1.0-0' }}%
+                </span>
+              </div>
+            </td>
+            <td>{{ getDeadlineLabel(goal) }}</td>
+            <td>
+              <span class="goal-status" [ngClass]="'status-' + getGoalStatus(goal)">
+                {{ getGoalStatusLabel(goal) }}
+              </span>
+            </td>
+            <td class="actions-col">
+              <div class="table-actions">
+                <button class="icon-btn edit-btn" type="button" (click)="openEditDrawer(goal)" aria-label="Edit goal">
+                   <fa-icon [icon]="icons.edit"></fa-icon>
                 </button>
-            </div>
 
-            <ng-container *ngIf="!isEditMode; else editGoalTemplate">
-                <div class="drawer-status-row">
-                    <span class="goal-status" [ngClass]="{
-              'status-completed': getGoalStatus(goal) === 'completed',
-              'status-on-track': getGoalStatus(goal) === 'on-track',
-              'status-needs-attention': getGoalStatus(goal) === 'needs-attention'
-            }">
-                        {{ getGoalStatusLabel(goal) }}
-                    </span>
+                <button class="icon-btn delete-btn" type="button" (click)="deleteGoalDirect(goal)"
+                  aria-label="Delete goal">
+                    <fa-icon [icon]="icons.delete"></fa-icon>
+                </button>
+              </div>
+            </td>
+          </tr>
 
-                    <strong class="drawer-progress-text">
-                        {{ getProgressPercent(goal) | number:'1.0-0' }}% complete
-                    </strong>
-                </div>
+          <tr *ngIf="filteredGoals.length === 0">
+            <td colspan="8">
+              <div class="empty-state">
+                <i class="fa-regular fa-folder-open"></i>
+                <p>No goals found for the current filters.</p>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
 
-                <div class="drawer-progress-block">
-                    <div class="goal-progress-track">
-                        <div class="goal-progress-bar" [style.width.%]="getProgressPercent(goal)"></div>
-                    </div>
-                </div>
+    <div class="mobile-goal-list">
+      <article class="mobile-goal-card" *ngFor="let goal of filteredGoals; trackBy: trackByGoalId">
+        <div class="mobile-goal-top">
+          <div>
+            <p class="mobile-goal-category">{{ goal.category }}</p>
+            <button class="goal-name-btn" type="button" (click)="openGoalDrawer(goal)">
+              {{ goal.name }}
+            </button>
+          </div>
 
-                <div class="drawer-stats-grid">
-                    <article class="drawer-stat-card">
-                        <span class="drawer-stat-label">Saved</span>
-                        <strong class="drawer-stat-value">Rs {{ goal.savedAmount | number }}</strong>
-                    </article>
+          <span class="goal-status" [ngClass]="'status-' + getGoalStatus(goal)">
+            {{ getGoalStatusLabel(goal) }}
+          </span>
+        </div>
 
-                    <article class="drawer-stat-card">
-                        <span class="drawer-stat-label">Remaining</span>
-                        <strong class="drawer-stat-value">Rs {{ getRemainingAmount(goal) | number }}</strong>
-                    </article>
+        <div class="mobile-goal-grid">
+          <div>
+            <span class="mobile-label">Saved</span>
+            <strong>Rs {{ goal.savedAmount | number }}</strong>
+          </div>
+          <div>
+            <span class="mobile-label">Target</span>
+            <strong>Rs {{ goal.targetAmount | number }}</strong>
+          </div>
+          <div>
+            <span class="mobile-label">Deadline</span>
+            <strong>{{ getDeadlineLabel(goal) }}</strong>
+          </div>
+          <div>
+            <span class="mobile-label">Transactions</span>
+            <strong>Rs {{ getContributionFromTransactions(goal.id) | number }}</strong>
+          </div>
+        </div>
 
-                    <article class="drawer-stat-card">
-                        <span class="drawer-stat-label">Monthly contribution</span>
-                        <strong class="drawer-stat-value">Rs {{ goal.monthlyContribution | number }}</strong>
-                    </article>
+        <div class="table-progress mobile-progress">
+          <div class="table-progress-bar">
+            <div class="table-progress-fill" [style.width.%]="getProgressPercent(goal)"></div>
+          </div>
+          <span class="table-progress-text">
+            {{ getProgressPercent(goal) | number:'1.0-0' }}%
+          </span>
+        </div>
 
-                    <article class="drawer-stat-card">
-                        <span class="drawer-stat-label">Suggested contribution</span>
-                        <strong class="drawer-stat-value positive-text">
-                            Rs {{ getSuggestedContribution(goal) | number }}
-                        </strong>
-                    </article>
-                </div>
+        <div class="mobile-actions">
+          <button class="btn mobile-secondary-btn" type="button" (click)="openEditDrawer(goal)">
+            <fa-icon [icon]="icons.edit"></fa-icon>
+          </button>
+          <button class="btn mobile-danger-btn" type="button" (click)="deleteGoalDirect(goal)">
+            <fa-icon [icon]="icons.delete"></fa-icon>
+          </button>
+        </div>
+      </article>
+    </div>
+  </section>
 
-                <div class="drawer-detail-list">
-                    <div class="drawer-detail-row">
-                        <span>Target amount</span>
-                        <strong>Rs {{ goal.targetAmount | number }}</strong>
-                    </div>
+  <section class="recommendations-panel glass" *ngIf="recommendations.length">
+    <div class="section-head">
+      <div>
+        <p class="section-kicker">Smart guidance</p>
+        <h2 class="section-title">Recommendations</h2>
+      </div>
+    </div>
 
-                    <div class="drawer-detail-row">
-                        <span>Deadline</span>
-                        <strong>{{ getDeadlineLabel(goal) }}</strong>
-                    </div>
+    <div class="recommendation-list">
+      <article class="recommendation-card" *ngFor="let item of recommendations"
+        [ngClass]="'recommendation-' + item.tone">
+        <h3 class="recommendation-title">{{ item.title }}</h3>
+        <p class="recommendation-text">{{ item.text }}</p>
+      </article>
+    </div>
+  </section>
 
-                    <div class="drawer-detail-row">
-                        <span>Projected finish</span>
-                        <strong>{{ getProjectedCompletion(goal) }}</strong>
-                    </div>
+  <div class="drawer-backdrop" *ngIf="isDrawerOpen" (click)="closeDrawer()"></div>
 
-                    <div class="drawer-detail-row">
-                        <span>Months left at current pace</span>
-                        <strong>{{ getMonthsLeft(goal) }}</strong>
-                    </div>
-                </div>
+  <aside class="goal-drawer" [class.open]="isDrawerOpen">
+    <div class="drawer-header">
+      <div>
+        <p class="drawer-kicker">{{ isEditMode ? (isCreateMode ? 'Create goal' : 'Edit goal') : 'Goal details' }}</p>
+        <h2 class="drawer-title">
+          {{ isEditMode ? (isCreateMode ? 'Add new goal' : 'Update goal') : selectedGoal?.name }}
+        </h2>
+        <p class="drawer-category" *ngIf="selectedGoal && !isEditMode">{{ selectedGoal.category }}</p>
+      </div>
 
-                <div class="drawer-insight-card">
-                    <p class="drawer-insight-label">Planner insight</p>
+      <button class="drawer-close-btn" type="button" (click)="closeDrawer()">
+        <fa-icon [icon]="icons.close"></fa-icon>
+      </button>
+    </div>
 
-                    <p class="drawer-insight-text" *ngIf="getContributionGap(goal) <= 0">
-                        Your current monthly contribution is aligned with this goal’s timeline. Stay consistent and you
-                        should remain on pace.
-                    </p>
+    <ng-container *ngIf="selectedGoal && !isEditMode">
+      <div class="drawer-status-row">
+        <span class="goal-status" [ngClass]="'status-' + getGoalStatus(selectedGoal)">
+          {{ getGoalStatusLabel(selectedGoal) }}
+        </span>
+        <strong class="drawer-progress-text">
+          {{ getProgressPercent(selectedGoal) | number:'1.0-0' }}% complete
+        </strong>
+      </div>
 
-                    <p class="drawer-insight-text" *ngIf="getContributionGap(goal) > 0">
-                        To stay comfortably on track for the deadline, consider increasing this goal by about
-                        <strong>Rs {{ getContributionGap(goal) | number }}</strong>
-                        per month.
-                    </p>
-                </div>
+      <div class="drawer-progress-block">
+        <div class="table-progress-bar">
+          <div class="table-progress-fill" [style.width.%]="getProgressPercent(selectedGoal)"></div>
+        </div>
+      </div>
 
-                <div class="drawer-actions">
-                    <button class="btn drawer-secondary-btn" type="button" (click)="enableEditMode()">
-                        Edit Goal
-                    </button>
-                    <button class="btn drawer-danger-btn" type="button" (click)="deleteSelectedGoal()">
-                        Delete Goal
-                    </button>
-                </div>
-            </ng-container>
+      <div class="drawer-stats-grid">
+        <article class="drawer-stat-card">
+          <span class="drawer-stat-label">Saved</span>
+          <strong class="drawer-stat-value">Rs {{ selectedGoal.savedAmount | number }}</strong>
+        </article>
 
-            <ng-template #editGoalTemplate>
-                <form class="drawer-form" (ngSubmit)="saveGoalChanges()">
-                    <div class="drawer-form-grid">
-                        <div class="form-field full">
-                            <label for="drawer-name">Goal name</label>
-                            <input id="drawer-name" class="input" type="text" name="drawer-name"
-                                [(ngModel)]="drawerForm.name" required />
-                        </div>
+        <article class="drawer-stat-card">
+          <span class="drawer-stat-label">Target</span>
+          <strong class="drawer-stat-value">Rs {{ selectedGoal.targetAmount | number }}</strong>
+        </article>
 
-                        <div class="form-field">
-                            <label for="drawer-target">Target amount</label>
-                            <input id="drawer-target" class="input" type="number" name="drawer-target"
-                                [(ngModel)]="drawerForm.targetAmount" required />
-                        </div>
+        <article class="drawer-stat-card">
+          <span class="drawer-stat-label">Transactions</span>
+          <strong class="drawer-stat-value">Rs {{ getContributionFromTransactions(selectedGoal.id) | number }}</strong>
+        </article>
 
-                        <div class="form-field">
-                            <label for="drawer-saved">Already saved</label>
-                            <input id="drawer-saved" class="input" type="number" name="drawer-saved"
-                                [(ngModel)]="drawerForm.savedAmount" />
-                        </div>
+        <article class="drawer-stat-card">
+          <span class="drawer-stat-label">Remaining</span>
+          <strong class="drawer-stat-value">Rs {{ getRemainingAmount(selectedGoal) | number }}</strong>
+        </article>
+      </div>
 
-                        <div class="form-field">
-                            <label for="drawer-monthly">Monthly contribution</label>
-                            <input id="drawer-monthly" class="input" type="number" name="drawer-monthly"
-                                [(ngModel)]="drawerForm.monthlyContribution" required />
-                        </div>
+      <div class="drawer-detail-list">
+        <div class="drawer-detail-row">
+          <span>Deadline</span>
+          <strong>{{ getDeadlineLabel(selectedGoal) }}</strong>
+        </div>
+        <div class="drawer-detail-row">
+          <span>Monthly contribution</span>
+          <strong>Rs {{ selectedGoal.monthlyContribution | number }}</strong>
+        </div>
+        <div class="drawer-detail-row">
+          <span>Projected finish</span>
+          <strong>{{ getProjectedCompletion(selectedGoal) }}</strong>
+        </div>
+        <div class="drawer-detail-row">
+          <span>Suggested pace</span>
+          <strong>Rs {{ getSuggestedContribution(selectedGoal) | number }}</strong>
+        </div>
+      </div>
 
-                        <div class="form-field">
-                            <label for="drawer-deadline">Deadline</label>
-                            <input id="drawer-deadline" class="input" type="date" name="drawer-deadline"
-                                [(ngModel)]="drawerForm.deadline" required />
-                        </div>
+      <div class="drawer-actions">
+        <button class="btn drawer-secondary-btn" type="button" (click)="startEditGoal()">Edit</button>
+      </div>
+    </ng-container>
 
-                        <div class="form-field full">
-                            <label for="drawer-category">Category</label>
-                            <select id="drawer-category" class="input" name="drawer-category"
-                                [(ngModel)]="drawerForm.category">
-                                <option value="General">General</option>
-                                <option value="Tech">Tech</option>
-                                <option value="Safety">Safety</option>
-                                <option value="Lifestyle">Lifestyle</option>
-                                <option value="Travel">Travel</option>
-                                <option value="Education">Education</option>
-                            </select>
-                        </div>
-                    </div>
+    <form class="drawer-form" *ngIf="isEditMode" (ngSubmit)="saveGoalChanges()">
+      <div class="drawer-form-grid">
+        <div class="form-field full">
+          <label for="drawerName">Goal name</label>
+          <input id="drawerName" class="input" type="text" [(ngModel)]="drawerForm.name" name="drawerName" />
+        </div>
 
-                    <div class="drawer-actions">
-                        <button class="btn drawer-secondary-btn" type="button" (click)="cancelEditMode()">
-                            Cancel
-                        </button>
-                        <button class="btn btn-primary" type="submit">
-                            Save Changes
-                        </button>
-                    </div>
-                </form>
-            </ng-template>
-        </ng-container>
-    </aside>
+        <div class="form-field">
+          <label for="drawerTarget">Target amount</label>
+          <input id="drawerTarget" class="input" type="number" [(ngModel)]="drawerForm.targetAmount"
+            name="drawerTarget" />
+        </div>
+
+        <div class="form-field">
+          <label for="drawerSaved">Saved amount</label>
+          <input id="drawerSaved" class="input" type="number" [(ngModel)]="drawerForm.savedAmount" name="drawerSaved" />
+        </div>
+
+        <div class="form-field">
+          <label for="drawerMonthly">Monthly contribution</label>
+          <input id="drawerMonthly" class="input" type="number" [(ngModel)]="drawerForm.monthlyContribution"
+            name="drawerMonthly" />
+        </div>
+
+        <div class="form-field">
+          <label for="drawerDeadline">Deadline</label>
+          <input id="drawerDeadline" class="input" type="date" [(ngModel)]="drawerForm.deadline"
+            name="drawerDeadline" />
+        </div>
+
+        <div class="form-field full">
+          <label for="drawerCategory">Category</label>
+          <select id="drawerCategory" class="input" [(ngModel)]="drawerForm.category" name="drawerCategory">
+            <option *ngFor="let category of categories" [value]="category">
+              {{ category }}
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <div class="drawer-actions">
+        <button class="btn drawer-secondary-btn" type="button" (click)="cancelEditMode()">Cancel</button>
+        <button class="btn btn-primary" type="submit">
+          {{ isCreateMode ? 'Create goal' : 'Save changes' }}
+        </button>
+      </div>
+    </form>
+  </aside>
 </section>

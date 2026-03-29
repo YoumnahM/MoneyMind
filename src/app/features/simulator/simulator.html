@@ -1,10 +1,9 @@
 <section class="simulator-page">
-  <!-- topbar -->
   <section class="simulator-topbar">
     <div>
-      <!-- <h1 class="simulator-title">Scenario Simulator</h1> -->
+      <h1 class="simulator-title">Try a new monthly plan</h1>
       <p class="simulator-subtitle">
-        Adjust spending assumptions and instantly see how they affect your savings pace and goal timeline.
+        Change a few flexible expenses and see how much more you could put toward your goal.
       </p>
     </div>
 
@@ -13,24 +12,29 @@
         Reset
       </button>
       <button class="btn btn-primary" type="button" (click)="applySmartSaverPreset()">
-        Smart Saver Preset
+        Use smart saver idea
       </button>
     </div>
   </section>
 
-  <!-- main grid -->
+  <section class="glass simulator-summary-card">
+    <p class="simulator-summary-text">{{ simulatorMessage }}</p>
+  </section>
+
   <div class="simulator-main-grid">
-    <!-- sliders -->
     <section class="simulator-controls glass">
       <div class="section-head">
         <div>
-          <p class="section-kicker">Scenario inputs</p>
-          <h2 class="section-title">Adjust selected categories</h2>
+          <p class="section-kicker">Step 1</p>
+          <h2 class="section-title">Adjust your spending</h2>
+          <p class="section-meta">
+            Move the sliders to test a different monthly plan.
+          </p>
         </div>
       </div>
 
       <div class="slider-list">
-        <article class="slider-card" *ngFor="let category of categories">
+        <article class="slider-card" *ngFor="let category of categories; trackBy: trackByCategory">
           <div class="slider-top">
             <div>
               <p class="slider-name">{{ category.name }}</p>
@@ -44,15 +48,9 @@
             </strong>
           </div>
 
-          <input
-            type="range"
-            [min]="category.min"
-            [max]="category.max"
-            [step]="category.step"
-            [ngModel]="scenarioValues[category.key]"
-            (ngModelChange)="updateScenario(category.key, $event)"
-            [class]="category.colorClass"
-          />
+          <input type="range" [min]="category.min" [max]="category.max" [step]="category.step"
+            [ngModel]="scenarioValues[category.key]" (ngModelChange)="updateScenario(category.key, $event)"
+            [class]="category.colorClass" />
 
           <div class="slider-meta">
             <span>Min: Rs {{ category.min | number }}</span>
@@ -62,64 +60,57 @@
       </div>
     </section>
 
-    <!-- projections -->
     <section class="projection-panel">
       <div class="projection-grid">
         <article class="projection-card glass">
-          <p class="projection-label">Baseline monthly expenses</p>
-          <h3 class="projection-value">Rs {{ baselineTotalExpenses | number }}</h3>
-          <span class="projection-note">Current selected categories total</span>
+          <p class="projection-label">Current monthly spending</p>
+          <h3 class="projection-value">Rs {{ currentSpending | number }}</h3>
+          <span class="projection-note">Across the selected categories</span>
         </article>
 
         <article class="projection-card glass">
-          <p class="projection-label">Scenario monthly expenses</p>
-          <h3 class="projection-value">Rs {{ scenarioTotalExpenses | number }}</h3>
-          <span
-            class="projection-note"
-            [ngClass]="monthlyImprovement <= 0 ? 'negative-text' : 'positive-text'"
-          >
-            {{ monthlyImprovement > 0 ? '-' : '+' }}Rs {{ (monthlyImprovement < 0 ? -monthlyImprovement : monthlyImprovement) | number }}
-            impact vs baseline
+          <p class="projection-label">Your new monthly plan</p>
+          <h3 class="projection-value">Rs {{ plannedSpending | number }}</h3>
+          <span class="projection-note" [ngClass]="extraSavings < 0 ? 'negative-text' : 'positive-text'">
+            {{ extraSavings >= 0 ? 'You free up' : 'You spend' }}
+            Rs {{ (extraSavings < 0 ? -extraSavings : extraSavings) | number }} </span>
+        </article>
+
+        <article class="projection-card glass">
+          <p class="projection-label">Money left after spending</p>
+          <h3 class="projection-value">Rs {{ newFreeMoney | number }}</h3>
+          <span class="projection-note">
+            Current: Rs {{ currentFreeMoney | number }}
           </span>
         </article>
 
         <article class="projection-card glass">
-          <p class="projection-label">Available to save</p>
-          <h3 class="projection-value">Rs {{ scenarioLeftover | number }}</h3>
-          <span class="projection-note positive-text">
-            {{ monthlyImprovement >= 0 ? '+' : '' }}Rs {{ monthlyImprovement | number }}
-            additional room
-          </span>
-        </article>
-
-        <article class="projection-card glass">
-          <p class="projection-label">Projected monthly contribution</p>
-          <h3 class="projection-value">Rs {{ recommendedGoalContribution | number }}</h3>
-          <span class="projection-note">Goal-focused scenario estimate</span>
+          <p class="projection-label">Possible monthly goal saving</p>
+          <h3 class="projection-value">Rs {{ newGoalContribution | number }}</h3>
+          <span class="projection-note">Your current saving plus any extra freed up</span>
         </article>
       </div>
 
-      <!-- goal timeline -->
-      <section class="goal-timeline glass">
+      <section class="goal-timeline glass" *ngIf="selectedGoal; else noGoal">
         <div class="section-head">
           <div>
-            <p class="section-kicker">Updated goal timeline</p>
-            <h2 class="section-title">Laptop Fund projection</h2>
+            <p class="section-kicker">Step 2</p>
+            <h2 class="section-title">{{ selectedGoal.name }} projection</h2>
           </div>
 
           <span class="timeline-badge" [ngClass]="monthsSaved > 0 ? 'badge-positive' : 'badge-neutral'">
-            {{ monthsSaved > 0 ? monthsSaved + ' months faster' : 'No timeline gain yet' }}
+            {{ monthsSaved > 0 ? monthsSaved + ' month(s) faster' : 'No faster timeline yet' }}
           </span>
         </div>
 
         <div class="timeline-stats">
           <div class="timeline-stat">
-            <span class="timeline-label">Current target month</span>
+            <span class="timeline-label">Current finish</span>
             <strong class="timeline-value">{{ currentGoalMonthLabel }}</strong>
           </div>
 
           <div class="timeline-stat">
-            <span class="timeline-label">Projected target month</span>
+            <span class="timeline-label">New finish</span>
             <strong class="timeline-value positive-text">{{ projectedGoalMonthLabel }}</strong>
           </div>
 
@@ -129,7 +120,7 @@
           </div>
 
           <div class="timeline-stat">
-            <span class="timeline-label">Remaining</span>
+            <span class="timeline-label">Still needed</span>
             <strong class="timeline-value">Rs {{ goalRemaining | number }}</strong>
           </div>
         </div>
@@ -137,84 +128,92 @@
         <div class="timeline-progress-wrap">
           <div class="progress-block">
             <div class="progress-head">
-              <span>Current path</span>
+              <span>Current progress</span>
               <strong>{{ currentCompletionPercent | number:'1.0-0' }}%</strong>
             </div>
             <div class="progress-track">
-              <div
-                class="progress-bar progress-current"
-                [style.width.%]="currentCompletionPercent"
-              ></div>
+              <div class="progress-bar progress-current" [style.width.%]="currentCompletionPercent"></div>
             </div>
           </div>
 
           <div class="progress-block">
             <div class="progress-head">
-              <span>After one scenario month</span>
+              <span>After one month with this plan</span>
               <strong>{{ projectedCompletionNextMonthPercent | number:'1.0-0' }}%</strong>
             </div>
             <div class="progress-track">
-              <div
-                class="progress-bar progress-projected"
-                [style.width.%]="projectedCompletionNextMonthPercent"
-              ></div>
+              <div class="progress-bar progress-projected" [style.width.%]="projectedCompletionNextMonthPercent"></div>
             </div>
           </div>
         </div>
       </section>
+
+      <ng-template #noGoal>
+        <section class="goal-timeline glass empty-goal-state">
+          <div class="section-head">
+            <div>
+              <p class="section-kicker">Step 2</p>
+              <h2 class="section-title">Goal projection</h2>
+            </div>
+          </div>
+
+          <p class="section-meta">
+            Add a savings goal to see how this plan affects your timeline.
+          </p><br>
+
+          <button class="btn btn-primary" type="button" (click)="goToGoals()">
+            Create a goal
+          </button>
+        </section>
+      </ng-template>
     </section>
   </div>
 
-  <!-- comparison chart -->
   <section class="comparison-section glass">
     <div class="section-head">
       <div>
-        <p class="section-kicker">Comparison before / after</p>
-        <h2 class="section-title">Scenario impact overview</h2>
+        <p class="section-kicker">Before vs after</p>
+        <h2 class="section-title">See the difference</h2>
       </div>
-      <span class="section-meta">Baseline vs adjusted scenario</span>
+      <span class="section-meta">Current plan compared with your new plan</span>
     </div>
 
     <div class="comparison-layout">
       <div class="comparison-chart-card">
         <div class="chart-wrap">
-          <canvas
-            baseChart
-            [type]="comparisonChartType"
-            [data]="comparisonChartData"
-            [options]="comparisonChartOptions"
-          ></canvas>
+          <canvas baseChart [type]="comparisonChartType" [data]="comparisonChartData"
+            [options]="comparisonChartOptions"></canvas>
         </div>
       </div>
 
       <div class="comparison-insights">
         <article class="comparison-note-card">
-          <span class="note-label">Expense shift</span>
+          <span class="note-label">Spending change</span>
           <h3 class="note-value">
-            Rs {{ (baselineTotalExpenses - scenarioTotalExpenses) | number }}
+            Rs {{ (currentSpending - plannedSpending) | number }}
           </h3>
           <p class="note-text">
-            Reduction in selected monthly expenses compared with the current baseline.
+            This is the difference between what you spend now and your new plan.
           </p>
         </article>
 
         <article class="comparison-note-card">
-          <span class="note-label">Extra monthly capacity</span>
-          <h3 class="note-value positive-text">
-            Rs {{ monthlyImprovement | number }}
+          <span class="note-label">Extra monthly room</span>
+          <h3 class="note-value" [ngClass]="extraSavings >= 0 ? 'positive-text' : 'negative-text'">
+            Rs {{ extraSavings | number }}
           </h3>
           <p class="note-text">
-            Additional amount that could be redirected toward savings or goal funding.
+            This amount could go toward savings if you stick to this plan.
           </p>
         </article>
 
-        <article class="comparison-note-card">
-          <span class="note-label">Timeline result</span>
+        <article class="comparison-note-card" *ngIf="selectedGoal">
+          <span class="note-label">Goal result</span>
           <h3 class="note-value">
-            {{ projectedMonthsToGoal }} months
+            {{ newMonthsToGoal }} months
           </h3>
           <p class="note-text">
-            Estimated time to complete your goal if this scenario becomes your new monthly pattern.
+            Estimated time to reach {{ selectedGoal.name }} with this monthly plan.
           </p>
         </article>
       </div>

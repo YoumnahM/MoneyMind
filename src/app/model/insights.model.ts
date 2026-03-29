@@ -30,4 +30,5 @@ export interface CategoryGrowth {
   change: number;
   amount: string;
   direction: 'up' | 'down';
+  label: string;
 }

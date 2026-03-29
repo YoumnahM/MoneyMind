@@ -13,9 +13,11 @@ export const appConfig: ApplicationConfig = {
     provideRouter(routes),
     provideAnimations(),
     provideToastr({
-      positionClass: 'toast-bottom-right',
+      timeOut: 2500,
+      positionClass: 'toast-top-right',
       preventDuplicates: true,
-      timeOut: 3000,
+      progressBar: true,
+      closeButton: true
     }),
     provideCharts(withDefaultRegisterables()),
   ]
