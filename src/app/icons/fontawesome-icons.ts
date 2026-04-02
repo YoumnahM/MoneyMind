@@ -15,7 +15,8 @@ import {
   faXmark,
   faPen,
   faTrash,
-  faFolderOpen
+  faFolderOpen,
+  faUser
 } from '@fortawesome/free-solid-svg-icons';
 
 export const faIcons = {
@@ -39,4 +40,5 @@ export const faIcons = {
   edit: faPen,
   delete: faTrash,
   empty: faFolderOpen,
+  user: faUser,
 };

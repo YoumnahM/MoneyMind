@@ -17,8 +17,9 @@
 
     <div class="header-right">
       <div class="user-chip">
-        <div class="user-avatar">{{ user.initials }}</div>
-
+        <div class="user-avatar icon-avatar">
+          <fa-icon [icon]="icons.user"></fa-icon>
+        </div>
         <div class="user-info">
           <p class="user-name">{{ user.name }}</p>
           <p class="user-role">{{ user.role }}</p>

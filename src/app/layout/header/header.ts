@@ -16,11 +16,7 @@ export class Header {
 
   icons = faIcons;
 
-  user = {
-    name: 'Youmnah',
-    role: 'Financial Explorer',
-    initials: 'YM',
-  };
+  user = this.generateUserProfile();
 
   pageMeta: Record<string, { kicker: string; title: string; badge: string }> = {
     '/': {
@@ -72,6 +68,26 @@ export class Header {
       kicker: 'Welcome back',
       title: 'MoneyMind',
       badge: 'Overview',
+    };
+  }
+
+  private generateUserProfile() {
+    const hour = new Date().getHours();
+
+    let greeting = 'Hello';
+
+    if (hour < 12) {
+      greeting = 'Good morning';
+    } else if (hour < 18) {
+      greeting = 'Good afternoon';
+    } else {
+      greeting = 'Good evening';
+    }
+
+    return {
+      name: greeting,
+      role: 'MoneyMind User',
+      initials: greeting.charAt(0),
     };
   }
 }
