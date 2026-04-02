@@ -3,16 +3,15 @@
     <div>
       <h1 class="insights-title">Understand your spending more easily</h1>
       <p class="insights-subtitle">
-        See simple patterns, changes, and habits from your recent transactions.
+        Track simple spending patterns, spot important changes, and understand where your money is going.
       </p>
     </div>
   </header>
 
-  <section class="summary-panel glass">
+  <section class="summary-panel glass" *ngIf="hasTransactions; else emptySummary">
     <div class="section-head">
       <div>
-        <p class="section-kicker">This month</p>
-        <h2 class="section-title">How you are doing</h2>
+        <h2 class="section-title">Your monthly summary</h2>
       </div>
       <span class="section-meta">Compared with last month</span>
     </div>
@@ -28,6 +27,15 @@
     </div>
   </section>
 
+  <ng-template #emptySummary>
+    <section class="empty-card glass empty-section">
+      <h3 class="empty-title">No insight data yet</h3>
+      <p class="empty-text">
+        Add a few transactions to compare months, detect spending habits, and unlock useful money insights.
+      </p>
+    </section>
+  </ng-template>
+
   <section class="chart-panel glass">
     <div class="section-head">
       <div>
@@ -37,9 +45,18 @@
       <span class="section-meta">Last 6 weeks</span>
     </div>
 
-    <div class="chart-wrap trend-chart-wrap">
+    <div class="chart-wrap trend-chart-wrap" *ngIf="hasTrendChartData; else emptyTrendChart">
       <canvas baseChart [type]="trendChartType" [data]="trendChartData" [options]="trendChartOptions"></canvas>
     </div>
+
+    <ng-template #emptyTrendChart>
+      <div class="empty-card chart-empty">
+        <h3 class="empty-title">No recent trend yet</h3>
+        <p class="empty-text">
+          Your six-week spending trend will appear here once you record more expense activity.
+        </p>
+      </div>
+    </ng-template>
   </section>
 
   <div class="insights-main-grid">
@@ -100,9 +117,18 @@
         </div>
       </div>
 
-      <div class="chart-wrap weekday-chart-wrap">
+      <div class="chart-wrap weekday-chart-wrap" *ngIf="hasWeekdayChartData; else emptyWeekdayChart">
         <canvas baseChart [type]="weekdayChartType" [data]="weekdayChartData" [options]="weekdayChartOptions"></canvas>
       </div>
+
+      <ng-template #emptyWeekdayChart>
+        <div class="empty-card chart-empty small-empty">
+          <h3 class="empty-title">No weekday pattern yet</h3>
+          <p class="empty-text">
+            Add more expenses across different days to compare weekday and weekend behaviour.
+          </p>
+        </div>
+      </ng-template>
 
       <div class="pattern-grid">
         <article class="pattern-card" *ngFor="let item of weekdayWeekendData">
@@ -121,7 +147,7 @@
         </div>
       </div>
 
-      <div class="growth-list">
+      <div class="growth-list" *ngIf="categoryGrowth.length > 0; else emptyGrowth">
         <article class="growth-row" *ngFor="let item of categoryGrowth">
           <div class="growth-main">
             <div class="growth-top">
@@ -136,12 +162,24 @@
             </div>
 
             <div class="growth-track">
-              <div class="growth-bar" [ngClass]="item.direction === 'up' ? 'bar-up' : 'bar-down'"
-                [style.width]="growthTrackStyle(item.change)"></div>
+              <div
+                class="growth-bar"
+                [ngClass]="item.direction === 'up' ? 'bar-up' : 'bar-down'"
+                [style.width]="growthTrackStyle(item.change)"
+              ></div>
             </div>
           </div>
         </article>
       </div>
+
+      <ng-template #emptyGrowth>
+        <div class="empty-card category-empty">
+          <h3 class="empty-title">No category comparison yet</h3>
+          <p class="empty-text">
+            Category changes will appear here when there is enough data to compare this month with last month.
+          </p>
+        </div>
+      </ng-template>
     </section>
   </div>
 </section>

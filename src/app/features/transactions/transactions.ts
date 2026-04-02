@@ -3,6 +3,7 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
+import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 
 import { Goal } from '../../model/goals.model';
 import {
@@ -13,7 +14,6 @@ import {
 import { TransactionService } from '../../services/transaction.service';
 import { GoalsService } from '../../services/goal.service';
 import { faIcons } from '../../icons/fontawesome-icons';
-import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
 
 @Component({
   selector: 'app-transactions',
@@ -23,7 +23,7 @@ import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
   styleUrls: ['./transactions.css'],
 })
 export class Transactions implements OnInit, OnDestroy {
-  private subscription = new Subscription();
+  private readonly subscription = new Subscription();
   readonly icons = faIcons;
 
   categories: string[] = [
@@ -41,6 +41,7 @@ export class Transactions implements OnInit, OnDestroy {
   transactions: FinanceTransaction[] = [];
   filteredTransactions: FinanceTransaction[] = [];
   availableGoals: Goal[] = [];
+  allGoals: Goal[] = [];
 
   filters = {
     search: '',
@@ -58,9 +59,9 @@ export class Transactions implements OnInit, OnDestroy {
   form: FinanceTransactionInput = this.getEmptyForm();
 
   constructor(
-    private transactionService: TransactionService,
-    private goalsService: GoalsService,
-    private toastr: ToastrService,
+    private readonly transactionService: TransactionService,
+    private readonly goalsService: GoalsService,
+    private readonly toastr: ToastrService,
   ) {}
 
   ngOnInit(): void {
@@ -68,12 +69,14 @@ export class Transactions implements OnInit, OnDestroy {
       this.transactionService.transactions$.subscribe((transactions) => {
         this.transactions = transactions;
         this.applyFilters();
+        this.refreshAvailableGoals();
       }),
     );
 
     this.subscription.add(
       this.goalsService.getGoals().subscribe((goals) => {
-        this.availableGoals = goals.filter((goal) => goal.savedAmount < goal.targetAmount);
+        this.allGoals = goals;
+        this.refreshAvailableGoals();
       }),
     );
   }
@@ -140,12 +143,9 @@ export class Transactions implements OnInit, OnDestroy {
         (transaction.goalName || '').toLowerCase().includes(searchValue);
 
       const matchesType = this.filters.type === 'all' || transaction.type === this.filters.type;
-
       const matchesCategory =
         this.filters.category === 'all' || transaction.category === this.filters.category;
-
       const matchesMonth = !this.filters.month || transaction.date.startsWith(this.filters.month);
-
       const matchesAmount = transaction.amount <= this.filters.maxAmount;
 
       return matchesSearch && matchesType && matchesCategory && matchesMonth && matchesAmount;
@@ -209,21 +209,26 @@ export class Transactions implements OnInit, OnDestroy {
       this.form.goalId = null;
       this.form.goalName = null;
       this.form.category = 'Food';
+
+      if (this.form.title === 'Goal contribution') {
+        this.form.title = '';
+      }
     }
   }
 
   onGoalChange(goalId: number | null): void {
     if (!goalId) {
+      this.form.goalId = null;
       this.form.goalName = null;
       return;
     }
 
     const selectedGoal = this.availableGoals.find((goal) => goal.id === Number(goalId));
-    this.form.goalId = goalId;
+    this.form.goalId = Number(goalId);
     this.form.goalName = selectedGoal?.name ?? null;
 
     if (selectedGoal && (!this.form.title || this.form.title === 'Goal contribution')) {
-      this.form.title = `${selectedGoal.name} contribution`;
+      this.form.title = `Contribution to ${selectedGoal.name}`;
     }
   }
 
@@ -272,9 +277,7 @@ export class Transactions implements OnInit, OnDestroy {
 
     const selectedGoal =
       this.form.isGoalContribution && this.form.goalId
-        ? (this.goalsService
-            .getGoalsSnapshot()
-            .find((goal) => goal.id === Number(this.form.goalId)) ?? null)
+        ? (this.allGoals.find((goal) => goal.id === Number(this.form.goalId)) ?? null)
         : null;
 
     const payload: FinanceTransactionInput = {
@@ -289,49 +292,42 @@ export class Transactions implements OnInit, OnDestroy {
     };
 
     if (this.editingTransaction) {
-      this.revertGoalImpact(this.editingTransaction);
       this.transactionService.updateTransaction(this.editingTransaction.id, payload);
-      this.applyGoalImpact(payload);
-
       this.toastr.success(`${payload.title} was updated successfully.`, 'Transaction Updated');
     } else {
       this.transactionService.addTransaction(payload);
-      this.applyGoalImpact(payload);
-
       this.toastr.success(`${payload.title} was added successfully.`, 'Transaction Added');
     }
 
     this.applyFilters();
+    this.refreshAvailableGoals();
     this.closeDrawer();
   }
 
   deleteTransaction(id: string): void {
     const transaction = this.transactions.find((item) => item.id === id);
-
     const confirmed = window.confirm(`Delete "${transaction?.title ?? 'this transaction'}"?`);
 
     if (!confirmed || !transaction) {
       return;
     }
 
-    this.revertGoalImpact(transaction);
     this.transactionService.deleteTransaction(id);
+    this.refreshAvailableGoals();
 
     this.toastr.warning(`${transaction.title} was deleted.`, 'Transaction Deleted');
   }
 
   clearAllTransactions(): void {
-    const confirmed = window.confirm(
-      'This will delete all transactions and reverse all goal contributions saved through transactions. Continue?',
-    );
+    const confirmed = window.confirm('This will delete all transactions. Continue?');
 
     if (!confirmed) {
       return;
     }
 
-    this.transactions.forEach((transaction) => this.revertGoalImpact(transaction));
     this.transactionService.clearAllTransactions();
     this.closeDrawer();
+    this.refreshAvailableGoals();
 
     this.toastr.warning('All transactions have been cleared.', 'All Cleared');
   }
@@ -341,23 +337,22 @@ export class Transactions implements OnInit, OnDestroy {
     return `${prefix} Rs ${amount.toLocaleString()}`;
   }
 
-  trackByTransactionId(index: number, transaction: FinanceTransaction): string {
+  getGoalChipText(transaction: FinanceTransaction): string {
+    if (transaction.isGoalContribution && transaction.goalName) {
+      return `Contributed to ${transaction.goalName}`;
+    }
+
+    return 'Goal contribution';
+  }
+
+  trackByTransactionId(_: number, transaction: FinanceTransaction): string {
     return transaction.id;
   }
 
-  private applyGoalImpact(payload: FinanceTransactionInput): void {
-    if (!payload.isGoalContribution || !payload.goalId) {
-      return;
-    }
-
-    this.goalsService.contributeToGoal(Number(payload.goalId), payload.amount);
-  }
-
-  private revertGoalImpact(transaction: FinanceTransaction): void {
-    if (!transaction.isGoalContribution || !transaction.goalId) {
-      return;
-    }
-
-    this.goalsService.removeContributionFromGoal(Number(transaction.goalId), transaction.amount);
+  private refreshAvailableGoals(): void {
+    this.availableGoals = this.allGoals.filter(
+      (goal) =>
+        this.goalsService.getGoalSavedAmount(goal.id, this.transactions) < goal.targetAmount,
+    );
   }
 }

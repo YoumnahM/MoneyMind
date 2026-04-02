@@ -9,7 +9,6 @@ import { Router } from '@angular/router';
 import { DashboardService } from '../../services/dashboard.service';
 import { StatCard, InsightItem, TopCategory, HealthScore } from '../../model/dashboard.model';
 import { Goal } from '../../model/goals.model';
-import { GoalsService } from '../../services/goal.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -24,8 +23,17 @@ export class Dashboard implements OnInit, OnDestroy {
   stats: StatCard[] = [];
   insights: InsightItem[] = [];
   topCategories: TopCategory[] = [];
-  goals: Goal[] = [];
-  latestGoal: Goal | null = null;
+
+  hasTransactions = false;
+  hasChartData = false;
+
+  featuredGoalData: {
+    goal: Goal | null;
+    contributedAmount: number;
+    remainingAmount: number;
+    progressPercentage: number;
+    suggestedMonthlyContribution: number;
+  } | null = null;
 
   healthScore: HealthScore = {
     score: 0,
@@ -93,15 +101,20 @@ export class Dashboard implements OnInit, OnDestroy {
   };
 
   constructor(
-    private dashboardService: DashboardService,
-    private goalsService: GoalsService,
-    private router: Router,
+    private readonly dashboardService: DashboardService,
+    private readonly router: Router,
   ) {}
 
   ngOnInit(): void {
     this.subscriptions.add(
       this.dashboardService.getStats().subscribe((data) => {
         this.stats = data;
+      }),
+    );
+
+    this.subscriptions.add(
+      this.dashboardService.hasTransactions().subscribe((hasData) => {
+        this.hasTransactions = hasData;
       }),
     );
 
@@ -120,6 +133,14 @@ export class Dashboard implements OnInit, OnDestroy {
     this.subscriptions.add(
       this.dashboardService.getSpendingChartData().subscribe((data) => {
         this.spendingChartData = data;
+        this.hasChartData =
+          Array.isArray(data.labels) &&
+          data.labels.length > 0 &&
+          Array.isArray(data.datasets) &&
+          data.datasets.some(
+            (dataset) =>
+              Array.isArray(dataset.data) && dataset.data.some((value) => Number(value) > 0),
+          );
       }),
     );
 
@@ -130,9 +151,8 @@ export class Dashboard implements OnInit, OnDestroy {
     );
 
     this.subscriptions.add(
-      this.goalsService.getGoals().subscribe((goals) => {
-        this.goals = goals;
-        this.latestGoal = this.getLatestGoal(goals);
+      this.dashboardService.getFeaturedGoal().subscribe((data) => {
+        this.featuredGoalData = data;
       }),
     );
 
@@ -149,34 +169,6 @@ export class Dashboard implements OnInit, OnDestroy {
     return this.healthScoreCircumference * (1 - progress);
   }
 
-  private getLatestGoal(goals: Goal[]): Goal | null {
-    if (!goals.length) return null;
-    return [...goals].sort((a, b) => b.id - a.id)[0];
-  }
-
-  getGoalProgress(goal: Goal): number {
-    if (!goal.targetAmount) return 0;
-    return Math.min((goal.savedAmount / goal.targetAmount) * 100, 100);
-  }
-
-  getGoalRemaining(goal: Goal): number {
-    return Math.max(goal.targetAmount - goal.savedAmount, 0);
-  }
-
-  getGoalStatus(goal: Goal): string {
-    const progress = this.getGoalProgress(goal);
-
-    if (progress >= 100) return 'Completed';
-    if (progress >= 75) return 'On track';
-    if (progress >= 40) return 'In progress';
-    return 'Needs attention';
-  }
-
-  isGoalPositive(goal: Goal): boolean {
-    const status = this.getGoalStatus(goal);
-    return status === 'Completed' || status === 'On track';
-  }
-
   formatCurrency(amount: number): string {
     return `Rs ${amount.toLocaleString()}`;
   }
@@ -184,7 +176,7 @@ export class Dashboard implements OnInit, OnDestroy {
   formatDeadline(deadline: string): string {
     const date = new Date(deadline);
 
-    if (isNaN(date.getTime())) {
+    if (Number.isNaN(date.getTime())) {
       return 'Not set';
     }
 
@@ -192,6 +184,18 @@ export class Dashboard implements OnInit, OnDestroy {
       month: 'short',
       year: 'numeric',
     });
+  }
+
+  getFeaturedGoalStatus(progressPercentage: number): string {
+    if (progressPercentage >= 100) return 'Completed';
+    if (progressPercentage >= 75) return 'On track';
+    if (progressPercentage >= 40) return 'In progress';
+    return 'Needs attention';
+  }
+
+  isFeaturedGoalPositive(progressPercentage: number): boolean {
+    const status = this.getFeaturedGoalStatus(progressPercentage);
+    return status === 'Completed' || status === 'On track';
   }
 
   goToInsights(): void {
@@ -204,6 +208,10 @@ export class Dashboard implements OnInit, OnDestroy {
 
   goToGoals(): void {
     this.router.navigate(['/goals']);
+  }
+
+  goToTransactions(): void {
+    this.router.navigate(['/transactions']);
   }
 
   private updateChartOptionsForViewport = (): void => {

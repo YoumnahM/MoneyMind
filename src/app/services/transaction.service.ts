@@ -10,7 +10,69 @@ export class TransactionService {
 
   private transactionsSubject = new BehaviorSubject<FinanceTransaction[]>(this.loadFromStorage());
 
-  transactions$: Observable<FinanceTransaction[]> = this.transactionsSubject.asObservable();
+  readonly transactions$: Observable<FinanceTransaction[]> =
+    this.transactionsSubject.asObservable();
+
+  getTransactionsSnapshot(): FinanceTransaction[] {
+    return this.transactionsSubject.value;
+  }
+
+  addTransaction(payload: FinanceTransactionInput): FinanceTransaction {
+    const transactions = this.getTransactionsSnapshot();
+
+    const newTransaction: FinanceTransaction = {
+      id: crypto?.randomUUID?.() ?? Date.now().toString(),
+      ...payload,
+      goalId: payload.isGoalContribution ? (payload.goalId ?? null) : null,
+      goalName: payload.isGoalContribution ? (payload.goalName ?? null) : null,
+    };
+
+    this.saveToStorage([newTransaction, ...transactions]);
+    return newTransaction;
+  }
+
+  updateTransaction(id: string, payload: FinanceTransactionInput): FinanceTransaction | null {
+    const transactions = this.getTransactionsSnapshot();
+    const existingTransaction = transactions.find((transaction) => transaction.id === id);
+
+    if (!existingTransaction) {
+      return null;
+    }
+
+    const updatedTransaction: FinanceTransaction = {
+      ...existingTransaction,
+      ...payload,
+      id,
+      goalId: payload.isGoalContribution ? (payload.goalId ?? null) : null,
+      goalName: payload.isGoalContribution ? (payload.goalName ?? null) : null,
+    };
+
+    const updatedTransactions = transactions.map((transaction) =>
+      transaction.id === id ? updatedTransaction : transaction,
+    );
+
+    this.saveToStorage(updatedTransactions);
+    return updatedTransaction;
+  }
+
+  deleteTransaction(id: string): FinanceTransaction | null {
+    const transactions = this.getTransactionsSnapshot();
+    const existingTransaction = transactions.find((transaction) => transaction.id === id);
+
+    if (!existingTransaction) {
+      return null;
+    }
+
+    const updatedTransactions = transactions.filter((transaction) => transaction.id !== id);
+    this.saveToStorage(updatedTransactions);
+
+    return existingTransaction;
+  }
+
+  clearAllTransactions(): void {
+    localStorage.removeItem(this.storageKey);
+    this.transactionsSubject.next([]);
+  }
 
   private loadFromStorage(): FinanceTransaction[] {
     const raw = localStorage.getItem(this.storageKey);
@@ -30,43 +92,5 @@ export class TransactionService {
   private saveToStorage(transactions: FinanceTransaction[]): void {
     localStorage.setItem(this.storageKey, JSON.stringify(transactions));
     this.transactionsSubject.next(transactions);
-  }
-
-  getTransactionsSnapshot(): FinanceTransaction[] {
-    return this.transactionsSubject.value;
-  }
-
-  addTransaction(payload: FinanceTransactionInput): void {
-    const transactions = this.getTransactionsSnapshot();
-
-    const newTransaction: FinanceTransaction = {
-      id: crypto.randomUUID(),
-      ...payload,
-    };
-
-    this.saveToStorage([newTransaction, ...transactions]);
-  }
-
-  updateTransaction(id: string, payload: FinanceTransactionInput): void {
-    const transactions = this.getTransactionsSnapshot();
-
-    const updatedTransactions = transactions.map((transaction) =>
-      transaction.id === id ? { ...transaction, ...payload, id } : transaction,
-    );
-
-    this.saveToStorage(updatedTransactions);
-  }
-
-  deleteTransaction(id: string): void {
-    const transactions = this.getTransactionsSnapshot();
-
-    const updatedTransactions = transactions.filter((transaction) => transaction.id !== id);
-
-    this.saveToStorage(updatedTransactions);
-  }
-
-  clearAllTransactions(): void {
-    localStorage.removeItem(this.storageKey);
-    this.transactionsSubject.next([]);
   }
 }

@@ -581,3 +581,32 @@
     font-size: 1.7rem;
   }
 }
+
+.empty-section,
+.chart-empty,
+.category-empty {
+  min-height: 220px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 2rem;
+}
+
+.empty-card {
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  border-radius: 24px;
+}
+
+.empty-title {
+  margin: 0 0 0.75rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #f4f7fb;
+}
+
+.empty-text {
+  margin: 0 0 1.25rem;
+  color: #9aa6b2;
+  line-height: 1.6;
+  max-width: 420px;
+}

@@ -394,3 +394,80 @@
     font-size: 0.95rem;
     line-height: 1.6;
 }
+
+.simulator-guide-card,
+.simulator-empty-state {
+  margin-bottom: 1.5rem;
+  padding: 20px;
+}
+
+.guide-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.guide-item {
+  display: flex;
+  gap: 0.9rem;
+  align-items: flex-start;
+  padding: 1rem;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.guide-step {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  display: inline-grid;
+  place-items: center;
+  font-weight: 700;
+  background: rgba(125, 211, 252, 0.16);
+  color: #dff4ff;
+  flex-shrink: 0;
+}
+
+.guide-title {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+  color: #f8fbff;
+}
+
+.guide-text {
+  margin: 0;
+  color: #9aa6b2;
+  line-height: 1.55;
+}
+
+.simulator-note-banner,
+.preset-note {
+  margin-top: 1rem;
+  padding: 0.95rem 1rem;
+  border-radius: 16px;
+  line-height: 1.6;
+}
+
+.simulator-note-banner {
+  background: rgba(96, 165, 250, 0.08);
+  border: 1px solid rgba(96, 165, 250, 0.18);
+  color: #dbeafe;
+}
+
+.preset-note {
+  background: rgba(167, 243, 208, 0.08);
+  border: 1px solid rgba(167, 243, 208, 0.16);
+  color: #dcfce7;
+}
+
+.simulator-empty-state .section-meta {
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 960px) {
+  .guide-grid {
+    grid-template-columns: 1fr;
+  }
+}

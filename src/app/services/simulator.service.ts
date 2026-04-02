@@ -13,14 +13,15 @@ import { TransactionService } from './transaction.service';
 })
 export class SimulatorService {
   constructor(
-    private transactionService: TransactionService,
-    private goalService: GoalsService,
+    private readonly transactionService: TransactionService,
+    private readonly goalService: GoalsService,
   ) {}
 
   getBaseData(): Observable<SimulatorBaseData> {
     return combineLatest([this.transactionService.transactions$, this.goalService.getGoals()]).pipe(
       map(([transactions, goals]) => {
         const currentMonthTransactions = this.getCurrentMonthTransactions(transactions);
+        const hasTransactionsThisMonth = currentMonthTransactions.length > 0;
 
         const monthlyIncome = currentMonthTransactions
           .filter((transaction) => transaction.type === 'income')
@@ -66,7 +67,9 @@ export class SimulatorService {
         ];
 
         const categories: ScenarioCategory[] = categoryConfig.map((item) => {
-          const amount = expenseTotals[item.name] ?? item.fallback;
+          const amount = hasTransactionsThisMonth
+            ? expenseTotals[item.name] ?? 0
+            : item.fallback;
 
           return {
             key: item.key,
@@ -84,16 +87,20 @@ export class SimulatorService {
           return acc;
         }, {});
 
-        const selectedGoal = this.getFeaturedGoal(goals);
+        const selectedGoal = this.goalService.getFeaturedGoal(goals, transactions);
+        const currentGoalSaved = selectedGoal
+          ? this.goalService.getGoalSavedAmount(selectedGoal.id, transactions)
+          : 0;
 
         return {
           monthlyIncome,
-          currentGoalSaved: selectedGoal?.savedAmount ?? 0,
+          currentGoalSaved,
           targetGoal: selectedGoal?.targetAmount ?? 0,
           currentMonthlyGoalContribution: selectedGoal?.monthlyContribution ?? 0,
           categories,
           baselineValues,
           selectedGoal,
+          hasTransactionsThisMonth,
         };
       }),
     );
@@ -186,43 +193,6 @@ export class SimulatorService {
     };
   }
 
-  private getFeaturedGoal(goals: Goal[]): Goal | null {
-    if (!goals.length) {
-      return null;
-    }
-
-    const activeGoals = goals.filter((goal) => goal.savedAmount < goal.targetAmount);
-
-    if (!activeGoals.length) {
-      return goals[0];
-    }
-
-    return [...activeGoals].sort((a, b) => {
-      const aDeadline = new Date(a.deadline).getTime();
-      const bDeadline = new Date(b.deadline).getTime();
-
-      const aHasValidDeadline = !isNaN(aDeadline);
-      const bHasValidDeadline = !isNaN(bDeadline);
-
-      if (aHasValidDeadline && bHasValidDeadline && aDeadline !== bDeadline) {
-        return aDeadline - bDeadline;
-      }
-
-      if (aHasValidDeadline && !bHasValidDeadline) {
-        return -1;
-      }
-
-      if (!aHasValidDeadline && bHasValidDeadline) {
-        return 1;
-      }
-
-      const aProgress = a.targetAmount ? a.savedAmount / a.targetAmount : 0;
-      const bProgress = b.targetAmount ? b.savedAmount / b.targetAmount : 0;
-
-      return bProgress - aProgress;
-    })[0];
-  }
-
   private getCurrentMonthTransactions(transactions: FinanceTransaction[]): FinanceTransaction[] {
     const now = new Date();
     const month = now.getMonth();
@@ -230,7 +200,9 @@ export class SimulatorService {
 
     return transactions.filter((transaction) => {
       const date = new Date(transaction.date);
-      return date.getMonth() === month && date.getFullYear() === year;
+      return (
+        !Number.isNaN(date.getTime()) && date.getMonth() === month && date.getFullYear() === year
+      );
     });
   }
 

@@ -2,7 +2,6 @@ export interface Goal {
   id: number;
   name: string;
   targetAmount: number;
-  savedAmount: number;
   monthlyContribution: number;
   deadline: string;
   category: string;

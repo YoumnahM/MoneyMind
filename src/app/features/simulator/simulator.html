@@ -3,7 +3,7 @@
     <div>
       <h1 class="simulator-title">Try a new monthly plan</h1>
       <p class="simulator-subtitle">
-        Change a few flexible expenses and see how much more you could put toward your goal.
+        Test small spending changes and see how they could improve your monthly savings and goal timeline.
       </p>
     </div>
 
@@ -17,8 +17,79 @@
     </div>
   </section>
 
+  <section class="glass simulator-guide-card">
+    <div class="section-head">
+      <div>
+        <p class="section-kicker">How it works</p>
+        <h2 class="section-title">Plan before you change anything</h2>
+      </div>
+    </div>
+
+    <div class="guide-grid">
+      <article class="guide-item">
+        <span class="guide-step">1</span>
+        <div>
+          <h3 class="guide-title">Adjust flexible expenses</h3>
+          <p class="guide-text">
+            Use the sliders to test lower or higher monthly spending in categories like food,
+            transport, entertainment, and shopping.
+          </p>
+        </div>
+      </article>
+
+      <article class="guide-item">
+        <span class="guide-step">2</span>
+        <div>
+          <h3 class="guide-title">Review your free money</h3>
+          <p class="guide-text">
+            The summary updates instantly so you can see how much money would be left after your
+            adjusted plan.
+          </p>
+        </div>
+      </article>
+
+      <article class="guide-item">
+        <span class="guide-step">3</span>
+        <div>
+          <h3 class="guide-title">Check your goal impact</h3>
+          <p class="guide-text">
+            If you already have a savings goal, the simulator shows whether your new plan could
+            help you reach it faster.
+          </p>
+        </div>
+      </article>
+    </div>
+
+    <div class="simulator-note-banner">
+      <strong>Note:</strong> {{ simulatorHelperText }}
+    </div>
+
+    <div class="preset-note">
+      <strong>Smart saver idea:</strong>
+      reduces Food by Rs 800, Entertainment by Rs 600, and Shopping by Rs 500 for a quick example plan.
+    </div>
+  </section>
+
   <section class="glass simulator-summary-card">
     <p class="simulator-summary-text">{{ simulatorMessage }}</p>
+  </section>
+
+  <section class="glass simulator-empty-state" *ngIf="!hasTransactionsThisMonth">
+    <div class="section-head">
+      <div>
+        <p class="section-kicker">Getting started</p>
+        <h2 class="section-title">You do not have enough data this month yet</h2>
+      </div>
+    </div>
+
+    <p class="section-meta">
+      You can still explore the simulator using sample baseline amounts, or add real transactions
+      to make the projections more accurate.
+    </p>
+
+    <button class="btn btn-primary" type="button" (click)="goToTransactions()">
+      Add transactions
+    </button>
   </section>
 
   <div class="simulator-main-grid">
@@ -28,7 +99,7 @@
           <p class="section-kicker">Step 1</p>
           <h2 class="section-title">Adjust your spending</h2>
           <p class="section-meta">
-            Move the sliders to test a different monthly plan.
+            Move the sliders to test a different monthly plan. These values are monthly estimates.
           </p>
         </div>
       </div>
@@ -39,7 +110,7 @@
             <div>
               <p class="slider-name">{{ category.name }}</p>
               <p class="slider-baseline">
-                Current: Rs {{ baselineValues[category.key] | number }}
+                Current plan: Rs {{ baselineValues[category.key] | number }}
               </p>
             </div>
 
@@ -72,7 +143,7 @@
           <p class="projection-label">Your new monthly plan</p>
           <h3 class="projection-value">Rs {{ plannedSpending | number }}</h3>
           <span class="projection-note" [ngClass]="extraSavings < 0 ? 'negative-text' : 'positive-text'">
-            {{ extraSavings >= 0 ? 'You free up' : 'You spend' }}
+            {{ extraSavings >= 0 ? 'You could free up' : 'You would spend' }}
             Rs {{ (extraSavings < 0 ? -extraSavings : extraSavings) | number }} </span>
         </article>
 
@@ -87,7 +158,7 @@
         <article class="projection-card glass">
           <p class="projection-label">Possible monthly goal saving</p>
           <h3 class="projection-value">Rs {{ newGoalContribution | number }}</h3>
-          <span class="projection-note">Your current saving plus any extra freed up</span>
+          <span class="projection-note">Your current goal saving plus any extra freed up</span>
         </article>
       </div>
 
@@ -158,8 +229,8 @@
           </div>
 
           <p class="section-meta">
-            Add a savings goal to see how this plan affects your timeline.
-          </p><br>
+            Add a savings goal to see how this monthly plan could affect your target timeline.
+          </p>
 
           <button class="btn btn-primary" type="button" (click)="goToGoals()">
             Create a goal
@@ -172,10 +243,10 @@
   <section class="comparison-section glass">
     <div class="section-head">
       <div>
-        <p class="section-kicker">Before vs after</p>
-        <h2 class="section-title">See the difference</h2>
+        <p class="section-kicker">Step 3</p>
+        <h2 class="section-title">Compare your current plan with your new plan</h2>
       </div>
-      <span class="section-meta">Current plan compared with your new plan</span>
+      <span class="section-meta">This helps you see the impact before making any real changes</span>
     </div>
 
     <div class="comparison-layout">
@@ -193,7 +264,7 @@
             Rs {{ (currentSpending - plannedSpending) | number }}
           </h3>
           <p class="note-text">
-            This is the difference between what you spend now and your new plan.
+            This is the difference between what you spend now and what your adjusted plan would look like.
           </p>
         </article>
 
@@ -203,7 +274,7 @@
             Rs {{ extraSavings | number }}
           </h3>
           <p class="note-text">
-            This amount could go toward savings if you stick to this plan.
+            This amount could go toward savings if you follow this plan consistently.
           </p>
         </article>
 

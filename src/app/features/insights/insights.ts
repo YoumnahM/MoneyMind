@@ -23,6 +23,8 @@ import { InsightsService } from '../../services/insights.service';
 export class Insights implements OnInit, OnDestroy {
   private subscriptions = new Subscription();
 
+  hasTransactions = false;
+
   trendMetrics: TrendMetric[] = [];
   detectedHabits: HabitInsight[] = [];
   alerts: AlertItem[] = [];
@@ -45,9 +47,15 @@ export class Insights implements OnInit, OnDestroy {
   trendChartOptions: ChartConfiguration<'line'>['options'] = {};
   weekdayChartOptions: ChartConfiguration<'bar'>['options'] = {};
 
-  constructor(private insightsService: InsightsService) {}
+  constructor(private readonly insightsService: InsightsService) {}
 
   ngOnInit(): void {
+    this.subscriptions.add(
+      this.insightsService.hasTransactions().subscribe((hasData) => {
+        this.hasTransactions = hasData;
+      }),
+    );
+
     this.subscriptions.add(
       this.insightsService.getTrendMetrics().subscribe((data) => {
         this.trendMetrics = data;
@@ -104,14 +112,34 @@ export class Insights implements OnInit, OnDestroy {
     return (value: number) => `${(Math.abs(value) / max) * 100}%`;
   }
 
+  get hasTrendChartData(): boolean {
+    return (
+      Array.isArray(this.trendChartData.labels) &&
+      this.trendChartData.labels.length > 0 &&
+      Array.isArray(this.trendChartData.datasets) &&
+      this.trendChartData.datasets.some((dataset) =>
+        Array.isArray(dataset.data) && dataset.data.some((value) => Number(value) > 0),
+      )
+    );
+  }
+
+  get hasWeekdayChartData(): boolean {
+    return (
+      Array.isArray(this.weekdayChartData.datasets) &&
+      this.weekdayChartData.datasets.some((dataset) =>
+        Array.isArray(dataset.data) && dataset.data.some((value) => Number(value) > 0),
+      )
+    );
+  }
+
   getSeverityLabel(severity: AlertItem['severity']): string {
     switch (severity) {
       case 'high':
-        return 'High';
+        return 'Needs attention';
       case 'medium':
-        return 'Medium';
+        return 'Keep an eye on it';
       default:
-        return 'Low';
+        return 'Small change';
     }
   }
 

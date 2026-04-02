@@ -1,4 +1,4 @@
-import { Goal } from "./goals.model";
+import { Goal } from './goals.model';
 
 export interface ScenarioCategory {
   key: string;
@@ -18,4 +18,5 @@ export interface SimulatorBaseData {
   categories: ScenarioCategory[];
   baselineValues: Record<string, number>;
   selectedGoal: Goal | null;
+  hasTransactionsThisMonth: boolean;
 }

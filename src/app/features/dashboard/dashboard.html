@@ -1,11 +1,19 @@
 <section class="dashboard-page">
-    <!-- Row 1 -->
     <div class="hero">
         <section class="hero-banner glass">
             <p class="hero-kicker">Money overview</p>
-            <h1 class="hero-title">Your money habits are getting better.</h1>
+            <h1 class="hero-title">
+                {{ hasTransactions ? 'Your money habits are getting better.' : 'Start tracking your money with
+                confidence.' }}
+            </h1>
             <p class="hero-text">
-                You are saving more steadily, spending is easier to track, and your recent activity looks more balanced.
+                {{
+                hasTransactions
+                ? 'You are saving more steadily, spending is easier to track, and your recent activity looks more
+                balanced.'
+                : 'Add your first income or expense to unlock insights, spending trends, and progress toward your
+                savings goals.'
+                }}
             </p>
 
             <div class="hero-actions">
@@ -46,25 +54,33 @@
         </section>
     </div>
 
-    <!-- Row 2 -->
-    <div class="stats-grid">
+    <div class="stats-grid" *ngIf="hasTransactions; else emptyStats">
         <article class="stat-card" [ngClass]="'stat-' + stat.theme" *ngFor="let stat of stats">
             <div class="stat-top">
                 <div class="stat-icon">
                     <fa-icon [icon]="stat.icon"></fa-icon>
                 </div>
-
-                <span class="stat-change" [class.positive]="stat.positive" [class.negative]="!stat.positive">
-                    {{ stat.change }}
-                </span>
             </div>
 
             <p class="stat-title">{{ stat.title }}</p>
             <h3 class="stat-value">{{ stat.value }}</h3>
+            <p class="stat-note" *ngIf="stat.change">{{ stat.change }}</p>
         </article>
     </div>
 
-    <!-- Row 3 -->
+    <ng-template #emptyStats>
+        <section class="empty-card glass empty-section">
+            <h3 class="empty-title">No financial data yet</h3>
+            <p class="empty-text">
+                Add your first income or expense to see your balance, monthly activity, and savings progress.
+            </p>
+
+            <button class="btn btn-primary" type="button" (click)="goToTransactions()">
+                Add transaction
+            </button>
+        </section>
+    </ng-template>
+
     <div class="middle-grid">
         <section class="chart-card glass">
             <div class="section-head">
@@ -74,10 +90,19 @@
                 </div>
             </div>
 
-            <div class="chart-wrap">
+            <div class="chart-wrap" *ngIf="hasChartData; else emptyChart">
                 <canvas baseChart [data]="spendingChartData" [options]="spendingChartOptions"
                     [type]="spendingChartType"></canvas>
             </div>
+
+            <ng-template #emptyChart>
+                <div class="empty-card chart-empty">
+                    <h3 class="empty-title">No trend data yet</h3>
+                    <p class="empty-text">
+                        Add transactions across days or months to view how your income and expenses change over time.
+                    </p>
+                </div>
+            </ng-template>
         </section>
 
         <section class="insights-panel glass">
@@ -102,13 +127,12 @@
         </section>
     </div>
 
-    <!-- Row 4 -->
     <div class="bottom-grid">
-        <section class="goal-card glass" *ngIf="latestGoal; else noGoal">
+        <section class="goal-card glass" *ngIf="featuredGoalData?.goal as goal; else noGoal">
             <div class="section-head">
                 <div>
-                    <p class="section-kicker">Latest goal</p>
-                    <h2 class="section-title">{{ latestGoal.name }}</h2>
+                    <p class="section-kicker">Featured goal</p>
+                    <h2 class="section-title">{{ goal.name }}</h2>
                 </div>
 
                 <button class="text-link-btn" type="button" (click)="goToGoals()">
@@ -118,36 +142,45 @@
 
             <div class="goal-summary-row">
                 <span class="goal-amount">
-                    {{ formatCurrency(latestGoal.savedAmount) }} / {{ formatCurrency(latestGoal.targetAmount) }}
+                    {{ formatCurrency(featuredGoalData!.contributedAmount) }} /
+                    {{ formatCurrency(goal.targetAmount) }}
                 </span>
 
-                <span class="goal-badge" [class.goal-badge-positive]="isGoalPositive(latestGoal)">
-                    {{ getGoalStatus(latestGoal) }}
+                <span class="goal-badge"
+                    [class.goal-badge-positive]="isFeaturedGoalPositive(featuredGoalData!.progressPercentage)">
+                    {{ getFeaturedGoalStatus(featuredGoalData!.progressPercentage) }}
                 </span>
             </div>
 
             <div class="goal-progress">
-                <div class="goal-progress-bar" [style.width.%]="getGoalProgress(latestGoal)"></div>
+                <div class="goal-progress-bar" [style.width.%]="featuredGoalData!.progressPercentage"></div>
             </div>
 
             <div class="goal-progress-caption">
-                {{ getGoalProgress(latestGoal) | number:'1.0-0' }}% saved
+                {{ featuredGoalData!.progressPercentage | number:'1.0-0' }}% contributed
             </div>
 
             <div class="goal-meta">
                 <div>
                     <p class="goal-meta-label">Target date</p>
-                    <p class="goal-meta-value">{{ formatDeadline(latestGoal.deadline) }}</p>
+                    <p class="goal-meta-value">{{ formatDeadline(goal.deadline) }}</p>
                 </div>
 
                 <div>
-                    <p class="goal-meta-label">Saving each month</p>
-                    <p class="goal-meta-value">{{ formatCurrency(latestGoal.monthlyContribution) }}</p>
+                    <p class="goal-meta-label">Monthly plan</p>
+                    <p class="goal-meta-value">{{ formatCurrency(goal.monthlyContribution) }}</p>
                 </div>
 
                 <div>
                     <p class="goal-meta-label">Remaining</p>
-                    <p class="goal-meta-value">{{ formatCurrency(getGoalRemaining(latestGoal)) }}</p>
+                    <p class="goal-meta-value">{{ formatCurrency(featuredGoalData!.remainingAmount) }}</p>
+                </div>
+
+                <div>
+                    <p class="goal-meta-label">Suggested pace</p>
+                    <p class="goal-meta-value">
+                        {{ formatCurrency(featuredGoalData!.suggestedMonthlyContribution) }}/month
+                    </p>
                 </div>
             </div>
         </section>
@@ -162,7 +195,7 @@
                 </div>
 
                 <p class="insight-text">
-                    Add your first savings goal to track progress here.
+                    Create a savings goal to track real contribution progress from your transactions.
                 </p>
 
                 <button class="btn btn-primary" type="button" (click)="goToGoals()">
@@ -179,7 +212,7 @@
                 </div>
             </div>
 
-            <div class="category-list">
+            <div class="category-list" *ngIf="topCategories.length > 0; else emptyCategories">
                 <article class="category-item" *ngFor="let category of topCategories">
                     <div class="category-row">
                         <div>
@@ -195,6 +228,15 @@
                     </div>
                 </article>
             </div>
+
+            <ng-template #emptyCategories>
+                <div class="empty-card category-empty">
+                    <h3 class="empty-title">No expense categories yet</h3>
+                    <p class="empty-text">
+                        Your highest spending categories will appear here after you record some expenses.
+                    </p>
+                </div>
+            </ng-template>
         </section>
     </div>
 </section>

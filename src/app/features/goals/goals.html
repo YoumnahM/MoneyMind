@@ -3,7 +3,7 @@
     <div class="hero-copy">
       <h1 class="goals-title">Plan and track your financial targets</h1>
       <p class="goals-subtitle">
-        Create savings goals, monitor progress, and see how much each goal received from linked transactions.
+        Create savings goals, monitor progress, and see how much each goal has received from linked transactions.
       </p>
     </div>
 
@@ -31,7 +31,7 @@
         <fa-icon [icon]="icons.wallet"></fa-icon>
       </div>
       <div class="kpi-content">
-        <span class="kpi-label">Total saved</span>
+        <span class="kpi-label">Total contributed</span>
         <strong class="kpi-value">Rs {{ totalGoalSavings | number }}</strong>
       </div>
     </article>
@@ -41,7 +41,7 @@
         <fa-icon [icon]="icons.trend"></fa-icon>
       </div>
       <div class="kpi-content">
-        <span class="kpi-label">From transactions</span>
+        <span class="kpi-label">Linked transactions</span>
         <strong class="kpi-value">Rs {{ totalContributedFromTransactions | number }}</strong>
       </div>
     </article>
@@ -61,7 +61,7 @@
           <option value="all">All goals</option>
           <option value="completed">Completed</option>
           <option value="on-track">On track</option>
-          <option value="needs-attention">Needs attention</option>
+          <option value="needs-attention">Need a boost</option>
         </select>
       </div>
 
@@ -102,7 +102,7 @@
           <tr>
             <th>Goal</th>
             <th>Category</th>
-            <th>Saved</th>
+            <th>Contributed</th>
             <th>Target</th>
             <th>Progress</th>
             <th>Deadline</th>
@@ -119,7 +119,7 @@
               </button>
             </td>
             <td>{{ goal.category }}</td>
-            <td>Rs {{ goal.savedAmount | number }}</td>
+            <td>Rs {{ getSavedAmount(goal) | number }}</td>
             <td>Rs {{ goal.targetAmount | number }}</td>
             <td>
               <div class="table-progress">
@@ -140,12 +140,12 @@
             <td class="actions-col">
               <div class="table-actions">
                 <button class="icon-btn edit-btn" type="button" (click)="openEditDrawer(goal)" aria-label="Edit goal">
-                   <fa-icon [icon]="icons.edit"></fa-icon>
+                  <fa-icon [icon]="icons.edit"></fa-icon>
                 </button>
 
                 <button class="icon-btn delete-btn" type="button" (click)="deleteGoalDirect(goal)"
                   aria-label="Delete goal">
-                    <fa-icon [icon]="icons.delete"></fa-icon>
+                  <fa-icon [icon]="icons.delete"></fa-icon>
                 </button>
               </div>
             </td>
@@ -180,8 +180,8 @@
 
         <div class="mobile-goal-grid">
           <div>
-            <span class="mobile-label">Saved</span>
-            <strong>Rs {{ goal.savedAmount | number }}</strong>
+            <span class="mobile-label">Contributed</span>
+            <strong>Rs {{ getSavedAmount(goal) | number }}</strong>
           </div>
           <div>
             <span class="mobile-label">Target</span>
@@ -192,7 +192,7 @@
             <strong>{{ getDeadlineLabel(goal) }}</strong>
           </div>
           <div>
-            <span class="mobile-label">Transactions</span>
+            <span class="mobile-label">Linked transactions</span>
             <strong>Rs {{ getContributionFromTransactions(goal.id) | number }}</strong>
           </div>
         </div>
@@ -270,8 +270,8 @@
 
       <div class="drawer-stats-grid">
         <article class="drawer-stat-card">
-          <span class="drawer-stat-label">Saved</span>
-          <strong class="drawer-stat-value">Rs {{ selectedGoal.savedAmount | number }}</strong>
+          <span class="drawer-stat-label">Contributed</span>
+          <strong class="drawer-stat-value">Rs {{ getSavedAmount(selectedGoal) | number }}</strong>
         </article>
 
         <article class="drawer-stat-card">
@@ -280,7 +280,7 @@
         </article>
 
         <article class="drawer-stat-card">
-          <span class="drawer-stat-label">Transactions</span>
+          <span class="drawer-stat-label">Linked transactions</span>
           <strong class="drawer-stat-value">Rs {{ getContributionFromTransactions(selectedGoal.id) | number }}</strong>
         </article>
 
@@ -296,7 +296,7 @@
           <strong>{{ getDeadlineLabel(selectedGoal) }}</strong>
         </div>
         <div class="drawer-detail-row">
-          <span>Monthly contribution</span>
+          <span>Monthly contribution plan</span>
           <strong>Rs {{ selectedGoal.monthlyContribution | number }}</strong>
         </div>
         <div class="drawer-detail-row">
@@ -325,11 +325,6 @@
           <label for="drawerTarget">Target amount</label>
           <input id="drawerTarget" class="input" type="number" [(ngModel)]="drawerForm.targetAmount"
             name="drawerTarget" />
-        </div>
-
-        <div class="form-field">
-          <label for="drawerSaved">Saved amount</label>
-          <input id="drawerSaved" class="input" type="number" [(ngModel)]="drawerForm.savedAmount" name="drawerSaved" />
         </div>
 
         <div class="form-field">

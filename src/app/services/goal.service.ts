@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { Goal, GoalRecommendation } from '../model/goals.model';
+import { FinanceTransaction } from '../model/transactions.model';
 
 type GoalInput = Omit<Goal, 'id'>;
 
@@ -13,10 +14,6 @@ export class GoalsService {
   private goalsSubject = new BehaviorSubject<Goal[]>(this.loadGoals());
   private recommendationsSubject = new BehaviorSubject<GoalRecommendation[]>([]);
 
-  constructor() {
-    this.updateRecommendations(this.goalsSubject.value);
-  }
-
   getGoals(): Observable<Goal[]> {
     return this.goalsSubject.asObservable();
   }
@@ -27,6 +24,10 @@ export class GoalsService {
 
   getRecommendations(): Observable<GoalRecommendation[]> {
     return this.recommendationsSubject.asObservable();
+  }
+
+  setRecommendations(recommendations: GoalRecommendation[]): void {
+    this.recommendationsSubject.next(recommendations);
   }
 
   addGoal(goal: GoalInput): void {
@@ -52,40 +53,87 @@ export class GoalsService {
     this.saveGoals(updatedGoals);
   }
 
-  contributeToGoal(goalId: number, amount: number): void {
-    if (amount <= 0) return;
-
-    const updatedGoals = this.goalsSubject.value.map((goal) =>
-      goal.id === goalId
-        ? {
-            ...goal,
-            savedAmount: Math.min(goal.savedAmount + amount, goal.targetAmount),
-          }
-        : goal,
-    );
-
-    this.saveGoals(updatedGoals);
-  }
-
-  removeContributionFromGoal(goalId: number, amount: number): void {
-    if (amount <= 0) return;
-
-    const updatedGoals = this.goalsSubject.value.map((goal) =>
-      goal.id === goalId
-        ? {
-            ...goal,
-            savedAmount: Math.max(goal.savedAmount - amount, 0),
-          }
-        : goal,
-    );
-
-    this.saveGoals(updatedGoals);
-  }
-
   clearGoals(): void {
     localStorage.removeItem(this.storageKey);
     this.goalsSubject.next([]);
     this.recommendationsSubject.next([]);
+  }
+
+  getGoalSavedAmount(goalId: number, transactions: FinanceTransaction[]): number {
+    return transactions
+      .filter(
+        (transaction) =>
+          transaction.isGoalContribution === true &&
+          transaction.goalId === goalId &&
+          transaction.amount > 0,
+      )
+      .reduce((sum, transaction) => sum + transaction.amount, 0);
+  }
+
+  getGoalContributionTotals(transactions: FinanceTransaction[]): Record<number, number> {
+    return transactions.reduce<Record<number, number>>((acc, transaction) => {
+      if (
+        transaction.isGoalContribution === true &&
+        transaction.goalId != null &&
+        transaction.amount > 0
+      ) {
+        acc[transaction.goalId] = (acc[transaction.goalId] ?? 0) + transaction.amount;
+      }
+
+      return acc;
+    }, {});
+  }
+
+  getGoalProgressPercentage(goal: Goal, transactions: FinanceTransaction[]): number {
+    if (goal.targetAmount <= 0) {
+      return 0;
+    }
+
+    const savedAmount = this.getGoalSavedAmount(goal.id, transactions);
+    return Math.min(Math.round((savedAmount / goal.targetAmount) * 100), 100);
+  }
+
+  getGoalRemainingAmount(goal: Goal, transactions: FinanceTransaction[]): number {
+    const savedAmount = this.getGoalSavedAmount(goal.id, transactions);
+    return Math.max(goal.targetAmount - savedAmount, 0);
+  }
+
+  getFeaturedGoal(goals: Goal[], transactions: FinanceTransaction[]): Goal | null {
+    if (!goals.length) {
+      return null;
+    }
+
+    const activeGoals = goals.filter((goal) => {
+      const savedAmount = this.getGoalSavedAmount(goal.id, transactions);
+      return savedAmount < goal.targetAmount;
+    });
+
+    const source = activeGoals.length ? activeGoals : goals;
+
+    return [...source].sort((a, b) => {
+      const aDeadline = new Date(a.deadline).getTime();
+      const bDeadline = new Date(b.deadline).getTime();
+
+      const aHasValidDeadline = !Number.isNaN(aDeadline);
+      const bHasValidDeadline = !Number.isNaN(bDeadline);
+
+      if (aHasValidDeadline && bHasValidDeadline && aDeadline !== bDeadline) {
+        return aDeadline - bDeadline;
+      }
+
+      if (aHasValidDeadline && !bHasValidDeadline) {
+        return -1;
+      }
+
+      if (!aHasValidDeadline && bHasValidDeadline) {
+        return 1;
+      }
+
+      const aProgress = this.getGoalProgressPercentage(a, transactions);
+      const bProgress = this.getGoalProgressPercentage(b, transactions);
+
+      return bProgress - aProgress;
+    })[0];
   }
 
   private loadGoals(): Goal[] {
@@ -106,44 +154,5 @@ export class GoalsService {
   private saveGoals(goals: Goal[]): void {
     localStorage.setItem(this.storageKey, JSON.stringify(goals));
     this.goalsSubject.next(goals);
-    this.updateRecommendations(goals);
-  }
-
-  private updateRecommendations(goals: Goal[]): void {
-    const recommendations: GoalRecommendation[] = [];
-
-    if (!goals.length) {
-      recommendations.push({
-        title: 'Start your first savings goal',
-        text: 'Create a goal to start tracking progress and building momentum.',
-        tone: 'tip',
-      });
-    }
-
-    goals.forEach((goal) => {
-      const progress = goal.targetAmount > 0 ? (goal.savedAmount / goal.targetAmount) * 100 : 0;
-
-      if (progress >= 100) {
-        recommendations.push({
-          title: `${goal.name} completed`,
-          text: 'Great work. You reached this goal successfully.',
-          tone: 'good',
-        });
-      } else if (progress < 35) {
-        recommendations.push({
-          title: `Boost ${goal.name}`,
-          text: 'Consider increasing your monthly contribution to stay on track.',
-          tone: 'watch',
-        });
-      } else {
-        recommendations.push({
-          title: `${goal.name} is moving well`,
-          text: 'Your savings progress looks healthy so far.',
-          tone: 'good',
-        });
-      }
-    });
-
-    this.recommendationsSubject.next(recommendations);
   }
 }

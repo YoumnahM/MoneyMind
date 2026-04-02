@@ -3,12 +3,12 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
 import { FontAwesomeModule } from '@fortawesome/angular-fontawesome';
+import { ToastrService } from 'ngx-toastr';
 
 import { Goal, GoalRecommendation } from '../../model/goals.model';
 import { FinanceTransaction } from '../../model/transactions.model';
 import { TransactionService } from '../../services/transaction.service';
 import { GoalsService } from '../../services/goal.service';
-import { ToastrService } from 'ngx-toastr';
 import { faIcons } from '../../icons/fontawesome-icons';
 
 type GoalInput = Omit<Goal, 'id'>;
@@ -43,6 +43,7 @@ export class Goals implements OnInit, OnDestroy {
   goals: Goal[] = [];
   filteredGoals: Goal[] = [];
   recommendations: GoalRecommendation[] = [];
+  transactions: FinanceTransaction[] = [];
   contributionTotalsByGoal: Record<number, number> = {};
 
   isDrawerOpen = false;
@@ -73,6 +74,7 @@ export class Goals implements OnInit, OnDestroy {
       this.goalsService.getGoals().subscribe((goals) => {
         this.goals = goals;
         this.applyGoalFilters();
+        this.refreshRecommendations();
       }),
     );
 
@@ -84,7 +86,10 @@ export class Goals implements OnInit, OnDestroy {
 
     this.subscription.add(
       this.transactionService.transactions$.subscribe((transactions) => {
-        this.contributionTotalsByGoal = this.buildContributionTotalsByGoal(transactions);
+        this.transactions = transactions;
+        this.contributionTotalsByGoal = this.goalsService.getGoalContributionTotals(transactions);
+        this.applyGoalFilters();
+        this.refreshRecommendations();
       }),
     );
   }
@@ -97,12 +102,8 @@ export class Goals implements OnInit, OnDestroy {
     return this.goals.filter((goal) => this.getGoalStatus(goal) !== 'completed').length;
   }
 
-  get completedGoalsCount(): number {
-    return this.goals.filter((goal) => this.getGoalStatus(goal) === 'completed').length;
-  }
-
   get totalGoalSavings(): number {
-    return this.goals.reduce((sum, goal) => sum + goal.savedAmount, 0);
+    return this.goals.reduce((sum, goal) => sum + this.getSavedAmount(goal), 0);
   }
 
   get totalContributedFromTransactions(): number {
@@ -186,11 +187,6 @@ export class Goals implements OnInit, OnDestroy {
     this.toastr.success(`${payload.name} was updated successfully.`, 'Goal Updated');
   }
 
-  deleteGoal(): void {
-    if (!this.selectedGoal) return;
-    this.deleteGoalDirect(this.selectedGoal);
-  }
-
   deleteGoalDirect(goal: Goal): void {
     const confirmed = window.confirm(`Delete "${goal.name}"?`);
     if (!confirmed) return;
@@ -240,13 +236,16 @@ export class Goals implements OnInit, OnDestroy {
     return goal.id;
   }
 
+  getSavedAmount(goal: Goal): number {
+    return this.goalsService.getGoalSavedAmount(goal.id, this.transactions);
+  }
+
   getProgressPercent(goal: Goal): number {
-    if (!goal.targetAmount) return 0;
-    return Math.min((goal.savedAmount / goal.targetAmount) * 100, 100);
+    return this.goalsService.getGoalProgressPercentage(goal, this.transactions);
   }
 
   getRemainingAmount(goal: Goal): number {
-    return Math.max(goal.targetAmount - goal.savedAmount, 0);
+    return this.goalsService.getGoalRemainingAmount(goal, this.transactions);
   }
 
   getContributionFromTransactions(goalId: number): number {
@@ -254,13 +253,19 @@ export class Goals implements OnInit, OnDestroy {
   }
 
   getGoalStatus(goal: Goal): GoalStatus {
-    if (this.getProgressPercent(goal) >= 100) {
+    const progress = this.getProgressPercent(goal);
+
+    if (progress >= 100) {
       return 'completed';
     }
 
-    return goal.monthlyContribution >= this.getSuggestedContribution(goal)
-      ? 'on-track'
-      : 'needs-attention';
+    const suggestedContribution = this.getSuggestedContribution(goal);
+
+    if (suggestedContribution === 0 || goal.monthlyContribution >= suggestedContribution) {
+      return 'on-track';
+    }
+
+    return 'needs-attention';
   }
 
   getGoalStatusLabel(goal: Goal): string {
@@ -272,14 +277,14 @@ export class Goals implements OnInit, OnDestroy {
       case 'on-track':
         return 'On track';
       default:
-        return 'Needs attention';
+        return 'Needs a boost';
     }
   }
 
   getDeadlineLabel(goal: Goal): string {
     const date = new Date(goal.deadline);
 
-    if (isNaN(date.getTime())) {
+    if (Number.isNaN(date.getTime())) {
       return 'Not set';
     }
 
@@ -310,11 +315,12 @@ export class Goals implements OnInit, OnDestroy {
     const remaining = this.getRemainingAmount(goal);
     const deadline = new Date(goal.deadline);
 
-    if (remaining <= 0 || isNaN(deadline.getTime())) {
+    if (remaining <= 0 || Number.isNaN(deadline.getTime())) {
       return 0;
     }
 
     const today = new Date();
+
     const monthsLeft =
       (deadline.getFullYear() - today.getFullYear()) * 12 +
       (deadline.getMonth() - today.getMonth());
@@ -330,7 +336,6 @@ export class Goals implements OnInit, OnDestroy {
     return {
       name: '',
       targetAmount: 0,
-      savedAmount: 0,
       monthlyContribution: 0,
       deadline: '',
       category: 'Other',
@@ -341,7 +346,6 @@ export class Goals implements OnInit, OnDestroy {
     return {
       name: goal.name,
       targetAmount: goal.targetAmount,
-      savedAmount: goal.savedAmount,
       monthlyContribution: goal.monthlyContribution,
       deadline: goal.deadline,
       category: goal.category,
@@ -351,13 +355,11 @@ export class Goals implements OnInit, OnDestroy {
   private buildValidatedPayload(): GoalInput | null {
     const name = this.drawerForm.name.trim();
     const targetAmount = Number(this.drawerForm.targetAmount);
-    const savedAmount = Number(this.drawerForm.savedAmount);
     const monthlyContribution = Number(this.drawerForm.monthlyContribution);
 
     const isValid =
       !!name &&
       targetAmount > 0 &&
-      savedAmount >= 0 &&
       monthlyContribution >= 0 &&
       !!this.drawerForm.deadline &&
       !!this.drawerForm.category;
@@ -367,7 +369,6 @@ export class Goals implements OnInit, OnDestroy {
     return {
       name,
       targetAmount,
-      savedAmount,
       monthlyContribution,
       deadline: this.drawerForm.deadline,
       category: this.drawerForm.category,
@@ -398,8 +399,8 @@ export class Goals implements OnInit, OnDestroy {
     const aTime = new Date(a).getTime();
     const bTime = new Date(b).getTime();
 
-    const aValid = !isNaN(aTime);
-    const bValid = !isNaN(bTime);
+    const aValid = !Number.isNaN(aTime);
+    const bValid = !Number.isNaN(bTime);
 
     if (aValid && bValid) return aTime - bTime;
     if (aValid) return -1;
@@ -407,15 +408,73 @@ export class Goals implements OnInit, OnDestroy {
     return 0;
   }
 
-  private buildContributionTotalsByGoal(
-    transactions: FinanceTransaction[],
-  ): Record<number, number> {
-    return transactions.reduce<Record<number, number>>((acc, transaction) => {
-      if (transaction.isGoalContribution && transaction.goalId && transaction.amount > 0) {
-        acc[transaction.goalId] = (acc[transaction.goalId] ?? 0) + transaction.amount;
+  private refreshRecommendations(): void {
+    const recommendations: GoalRecommendation[] = [];
+
+    if (!this.goals.length) {
+      recommendations.push({
+        title: 'Start your first savings goal',
+        text: 'Create a goal to track your progress and stay focused.',
+        tone: 'tip',
+      });
+
+      this.goalsService.setRecommendations(recommendations);
+      return;
+    }
+
+    this.goals.forEach((goal) => {
+      const savedAmount = this.getSavedAmount(goal);
+      const progress = this.getProgressPercent(goal);
+      const suggestedContribution = this.getSuggestedContribution(goal);
+      const remaining = this.getRemainingAmount(goal);
+
+      if (progress >= 100) {
+        recommendations.push({
+          title: `${goal.name} is completed`,
+          text: 'Great job. You reached this goal successfully.',
+          tone: 'good',
+        });
+        return;
       }
 
-      return acc;
-    }, {});
+      if (savedAmount > 0 && progress >= 50) {
+        recommendations.push({
+          title: `${goal.name} is moving well`,
+          text: `${this.formatCurrency(savedAmount)} has been contributed through linked transactions.`,
+          tone: 'good',
+        });
+        return;
+      }
+
+      if (savedAmount === 0) {
+        recommendations.push({
+          title: `Start funding ${goal.name}`,
+          text: 'Add a goal contribution transaction to begin making progress.',
+          tone: 'tip',
+        });
+        return;
+      }
+
+      if (goal.monthlyContribution < suggestedContribution && remaining > 0) {
+        recommendations.push({
+          title: `${goal.name} needs a little more each month`,
+          text: `Try setting aside about ${this.formatCurrency(suggestedContribution)} per month to stay on track.`,
+          tone: 'watch',
+        });
+        return;
+      }
+
+      recommendations.push({
+        title: `${goal.name} is on track`,
+        text: 'Your current pace looks healthy for this goal.',
+        tone: 'good',
+      });
+    });
+
+    this.goalsService.setRecommendations(recommendations.slice(0, 6));
+  }
+
+  private formatCurrency(amount: number): string {
+    return `Rs ${amount.toLocaleString()}`;
   }
 }

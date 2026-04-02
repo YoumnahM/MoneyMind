@@ -4,11 +4,11 @@ import { FormsModule } from '@angular/forms';
 import { ChartConfiguration, ChartData } from 'chart.js';
 import { BaseChartDirective } from 'ng2-charts';
 import { Subscription } from 'rxjs';
+import { Router } from '@angular/router';
 
 import { Goal } from '../../model/goals.model';
 import { ScenarioCategory } from '../../model/simulator.model';
 import { SimulatorService } from '../../services/simulator.service';
-import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-simulator',
@@ -31,6 +31,8 @@ export class Simulator implements OnInit, OnDestroy {
   scenarioValues: Record<string, number> = {};
   baselineValues: Record<string, number> = {};
 
+  hasTransactionsThisMonth = false;
+
   comparisonChartType: 'bar' = 'bar';
   comparisonChartData: ChartData<'bar'> = {
     labels: [],
@@ -39,7 +41,10 @@ export class Simulator implements OnInit, OnDestroy {
 
   comparisonChartOptions: ChartConfiguration<'bar'>['options'];
 
-  constructor(private simulatorService: SimulatorService, private router: Router) {
+  constructor(
+    private readonly simulatorService: SimulatorService,
+    private readonly router: Router,
+  ) {
     this.comparisonChartOptions = this.simulatorService.getComparisonChartOptions();
   }
 
@@ -53,8 +58,8 @@ export class Simulator implements OnInit, OnDestroy {
         this.currentMonthlyGoalContribution = data.currentMonthlyGoalContribution;
         this.categories = data.categories;
         this.baselineValues = { ...data.baselineValues };
-
         this.scenarioValues = { ...data.baselineValues };
+        this.hasTransactionsThisMonth = data.hasTransactionsThisMonth;
 
         this.updateChart();
       }),
@@ -127,7 +132,6 @@ export class Simulator implements OnInit, OnDestroy {
     }
 
     const projectedSaved = this.currentGoalSaved + this.newGoalContribution;
-
     return Math.min((projectedSaved / this.targetGoal) * 100, 100);
   }
 
@@ -156,8 +160,12 @@ export class Simulator implements OnInit, OnDestroy {
   }
 
   get simulatorMessage(): string {
+    if (!this.hasTransactionsThisMonth) {
+      return 'This simulator is using sample baseline amounts because you do not have enough transactions this month yet.';
+    }
+
     if (!this.selectedGoal) {
-      return 'Add a savings goal to see how your spending changes could affect your timeline.';
+      return 'Adjust your monthly plan to see how much spending you could reduce and how much money you could free up.';
     }
 
     if (this.extraSavings > 0 && this.monthsSaved > 0) {
@@ -169,10 +177,18 @@ export class Simulator implements OnInit, OnDestroy {
     }
 
     if (this.extraSavings < 0) {
-      return `This plan leaves you with Rs ${Math.abs(this.extraSavings).toLocaleString()} less each month.`;
+      return `This plan would leave you with Rs ${Math.abs(this.extraSavings).toLocaleString()} less each month.`;
     }
 
-    return 'Adjust the sliders to test a new monthly plan.';
+    return 'Move the sliders to test a different monthly spending plan.';
+  }
+
+  get simulatorHelperText(): string {
+    if (this.hasTransactionsThisMonth) {
+      return 'These amounts are based on your current month activity. Moving the sliders does not change your real transactions.';
+    }
+
+    return 'These starting amounts are sample values to help you explore the simulator before you have enough transaction data.';
   }
 
   updateScenario(key: string, value: number): void {
@@ -204,6 +220,14 @@ export class Simulator implements OnInit, OnDestroy {
     return category.key;
   }
 
+  goToGoals(): void {
+    this.router.navigate(['/goals']);
+  }
+
+  goToTransactions(): void {
+    this.router.navigate(['/transactions']);
+  }
+
   private updateChart(): void {
     this.comparisonChartData = this.simulatorService.getComparisonChartData(
       this.currentSpending,
@@ -213,9 +237,5 @@ export class Simulator implements OnInit, OnDestroy {
       this.currentMonthlyGoalContribution,
       this.newGoalContribution,
     );
-  }
-
-  goToGoals(): void {
-    this.router.navigate(['/goals']);
   }
 }

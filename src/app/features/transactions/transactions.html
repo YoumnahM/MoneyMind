@@ -2,7 +2,7 @@
   <section class="transactions-topbar">
     <div class="topbar-copy">
       <p class="transactions-subtitle">
-        Track your income and expenses, and optionally move money into your savings goals.
+        Track your income and expenses, and optionally link a transaction to a savings goal.
       </p>
     </div>
 
@@ -119,8 +119,8 @@
             {{ transaction.note || 'No note added' }}
           </span>
 
-          <div class="goal-chip" *ngIf="transaction.isGoalContribution && transaction.goalName">
-            For {{ transaction.goalName }}
+          <div class="goal-chip" *ngIf="transaction.isGoalContribution">
+            {{ getGoalChipText(transaction) }}
           </div>
         </div>
 
@@ -145,10 +145,11 @@
         <div class="table-cell actions-column">
           <span class="mobile-label">Actions</span>
           <div class="row-actions">
-            <button type="button" class="row-btn icon-btn" (click)="editTransaction(transaction)" aria-label="Edit transaction">
+            <button type="button" class="row-btn icon-btn" (click)="editTransaction(transaction)"
+              aria-label="Edit transaction">
               <fa-icon [icon]="icons.edit"></fa-icon>
             </button>
-          
+
             <button type="button" class="row-btn icon-btn danger-btn" (click)="deleteTransaction(transaction.id)"
               aria-label="Delete transaction">
               <fa-icon [icon]="icons.delete"></fa-icon>
@@ -196,11 +197,11 @@
             <label class="checkbox-row" for="isGoalContribution">
               <input id="isGoalContribution" type="checkbox" [(ngModel)]="form.isGoalContribution"
                 name="isGoalContribution" (ngModelChange)="onContributionToggle()" />
-              <span>Put this money aside for a savings goal</span>
+              <span>Count this as a goal contribution</span>
             </label>
 
             <p class="helper-text">
-              Turn this on when the money should count toward one specific goal.
+              Turn this on when the money should be linked to one specific savings goal.
             </p>
           </div>
         </div>
@@ -219,7 +220,8 @@
 
         <div class="form-field">
           <label for="type">Type</label>
-          <select id="type" class="input" [(ngModel)]="form.type" name="type" [disabled]="form.isGoalContribution ?? false">
+          <select id="type" class="input" [(ngModel)]="form.type" name="type"
+            [disabled]="form.isGoalContribution ?? false">
             <option value="income">Income</option>
             <option value="expense">Expense</option>
           </select>
@@ -262,7 +264,7 @@
 
         <div class="form-field full-span savings-preview" *ngIf="form.isGoalContribution && form.goalName">
           <div class="preview-chip">
-            This contribution will be added to <strong>{{ form.goalName }}</strong>
+            This transaction will contribute to <strong>{{ form.goalName }}</strong>
           </div>
         </div>
       </div>
