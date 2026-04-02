@@ -297,3 +297,17 @@ fa-icon {
     font-size: 0.9rem;
   }
 }
+
+.brand-logo-img {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  border-radius: 12px;
+
+  /* nice glass look */
+  background: rgba(255, 255, 255, 0.04);
+  padding: 6px;
+
+  /* subtle glow to match theme */
+  box-shadow: 0 0 15px rgba(125, 211, 252, 0.25);
+}
